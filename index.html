@@ -178,40 +178,68 @@
             }
 
             async function fetchThalexOrderbook() {
+                const corsProxy = 'https://api.allorigins.win/raw?url=';
+                const thalexApiUrl = 'https://thalex.com/api/v2/public/book?instrument_name=BTC-PERPETUAL';
+                
                 try {
-                    const response = await fetch('https://thalex.com/api/v2/public/book?instrument_name=BTC-PERPETUAL');
+                    const response = await fetch(corsProxy + encodeURIComponent(thalexApiUrl));
                     const data = await response.json();
                     if (data.result) {
-                        const bids = data.result.bids.slice(0, 5);
-                        const asks = data.result.asks.slice(0, 5);
-                        midPrice = (bids[0][0] + asks[0][0]) / 2;
-                        
-                        initialOrderbook = [
-                            ...bids.map(([price, quantity]) => ({
-                                price,
-                                quantity,
-                                tobe: calculateTOBE(Math.abs(price - midPrice), quantity)
-                            })),
-                            { price: midPrice, quantity: 0, tobe: 0, isMidprice: true },
-                            ...asks.map(([price, quantity]) => ({
-                                price,
-                                quantity,
-                                tobe: calculateTOBE(Math.abs(price - midPrice), quantity)
-                            }))
-                        ];
-                        initialOrderbook.sort((a, b) => b.price - a.price);
-                        updateOriginalOrderbook();
+                        processOrderbookData(data);
+                    } else {
+                        throw new Error('No result in API response');
                     }
                 } catch (error) {
                     console.error('Error fetching Thalex orderbook:', error);
+                    console.error('Error details:', error.message);
+                    if (error.response) {
+                        console.error('Response status:', error.response.status);
+                        console.error('Response text:', await error.response.text());
+                    }
+                    // Use mock data as a fallback
+                    useMockData();
                 }
+            }
+
+            function useMockData() {
+                const mockData = {
+                    result: {
+                        bids: [[50000, 1], [49900, 2], [49800, 3], [49700, 4], [49600, 5]],
+                        asks: [[50100, 1], [50200, 2], [50300, 3], [50400, 4], [50500, 5]]
+                    }
+                };
+                processOrderbookData(mockData);
+            }
+
+            function processOrderbookData(data) {
+                const bids = data.result.bids.slice(0, 5);
+                const asks = data.result.asks.slice(0, 5);
+                midPrice = (bids[0][0] + asks[0][0]) / 2;
+                
+                initialOrderbook = [
+                    ...bids.map(([price, quantity]) => ({
+                        price,
+                        quantity,
+                        tobe: calculateTOBE(Math.abs(price - midPrice), quantity)
+                    })),
+                    { price: midPrice, quantity: 0, tobe: 0, isMidprice: true },
+                    ...asks.map(([price, quantity]) => ({
+                        price,
+                        quantity,
+                        tobe: calculateTOBE(Math.abs(price - midPrice), quantity)
+                    }))
+                ];
+                initialOrderbook.sort((a, b) => b.price - a.price);
+                updateOriginalOrderbook();
             }
 
             function updateOriginalOrderbook() {
                 originalOrderbookTable.innerHTML = '';
                 let tobeSum = 0;
                 initialOrderbook.forEach(order => {
-                    tobeSum += order.tobe;
+                    if (!order.isMidprice) {
+                        tobeSum += order.tobe;
+                    }
                 });
                 
                 initialOrderbook.forEach(order => {
@@ -220,11 +248,11 @@
                         row.classList.add('midprice');
                     }
                     row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price.toFixed(2)}` : order.price.toFixed(2);
-                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
-                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
-                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / tobeSum).toFixed(1) + '%';
+                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(3);
+                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(6);
+                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / tobeSum).toFixed(2) + '%';
                 });
-                originalTobeSumDiv.textContent = `Original TOBEsum: ${tobeSum.toFixed(2)}`;
+                originalTobeSumDiv.textContent = `Original TOBEsum: ${tobeSum.toFixed(6)}`;
             }
 
             function addOrderLayer(side) {
@@ -283,12 +311,12 @@
                 }
 
                 bidLayers.forEach(layer => {
-                    const price = midPrice - (layer.spread * midPrice / 10000);
+                    const price = midPrice * (1 - layer.spread / 10000);
                     addOrder(price, layer.size, 'bid');
                 });
 
                 askLayers.forEach(layer => {
-                    const price = midPrice + (layer.spread * midPrice / 10000);
+                    const price = midPrice * (1 + layer.spread / 10000);
                     addOrder(price, layer.size, 'ask');
                 });
 
@@ -296,7 +324,11 @@
 
                 updatedOrderbookTable.innerHTML = '';
                 let updatedTobeSum = 0;
-                newOrderbook.forEach(order => updatedTobeSum += order.tobe);
+                newOrderbook.forEach(order => {
+                    if (!order.isMidprice) {
+                        updatedTobeSum += order.tobe;
+                    }
+                });
 
                 newOrderbook.forEach(order => {
                     const row = updatedOrderbookTable.insertRow();
@@ -307,19 +339,18 @@
                         row.classList.add('midprice');
                     }
                     row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price.toFixed(2)}` : order.price.toFixed(2);
-                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
-                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
-                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(1) + '%';
+                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(3);
+                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(6);
+                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(2) + '%';
                 });
 
-                updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(2)}`;
+                updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(6)}`;
 
-                const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(1);
+                const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(2);
                 rewardsAnalysisDiv.innerHTML = `
                     <h3>Rewards analysis for new orders</h3>
-                    <p>TOBE from new orders: ${newOrdersTOBE.toFixed(2)}</p>
-                    <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snapshots</p>
-                `;
+                    <p>TOBE from new orders: ${newOrdersTOBE.toFixed(6)}</p>
+                    <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snap`;
             }
 
             addBidLayerButton.addEventListener('click', () => addOrderLayer('bid'));
