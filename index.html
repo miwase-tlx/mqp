@@ -202,6 +202,9 @@
                         initialOrderbook.sort((a, b) => b.price - a.price);
                         updateOriginalOrderbook();
                     }
+                } catch (error) {
+                    console.error('Error fetching Thalex orderbook:', error);
+                }
             }
 
             function updateOriginalOrderbook() {
