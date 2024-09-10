@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Functional Thalex MQP Simulation for BTC-Perp</title>
+    <title>Functional Thalex MQP Simulation for BTC-PERPETUAL</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -87,7 +87,7 @@
     </style>
 </head>
 <body>
-    <h1>Functional Thalex MQP Simulation for BTC-Perp</h1>
+    <h1>Functional Thalex MQP Simulation for BTC-PERPETUAL</h1>
     <div id="orderInputs">
         <div id="bidInputs">
             <h3>Bid Orders</h3>
@@ -120,7 +120,8 @@
         </div>
     </div>
     <button id="confirmButton">Confirm</button>
-    <h2>Example orderbook</h2>
+    <button id="refreshOrderbook">Refresh Orderbook</button>
+    <h2>Thalex BTC-PERPETUAL Orderbook</h2>
     <table id="originalOrderbook">
         <thead>
             <tr>
@@ -150,17 +151,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const initialOrderbook = [
-                { price: 60004, quantity: 0.4, tobe: 0.178179744 },
-                { price: 60002, quantity: 0.4, tobe: 0.22449241 },
-                { price: 60000, quantity: 0.4, tobe: 0.282842712 },
-                { price: 59997, quantity: 0, tobe: 0, isMidprice: true },
-                { price: 59994, quantity: 0.4, tobe: 0.282842712 },
-                { price: 59992, quantity: 0.4, tobe: 0.22449241 },
-                { price: 59990, quantity: 0.4, tobe: 0.178179744 },
-            ];
-
             const confirmButton = document.getElementById('confirmButton');
+            const refreshOrderbookButton = document.getElementById('refreshOrderbook');
             const originalOrderbookTable = document.getElementById('originalOrderbook').getElementsByTagName('tbody')[0];
             const updatedOrderbookTable = document.getElementById('updatedOrderbook').getElementsByTagName('tbody')[0];
             const originalTobeSumDiv = document.getElementById('originalTobeSum');
@@ -171,6 +163,9 @@
             const bidInputsDiv = document.getElementById('bidInputs');
             const askInputsDiv = document.getElementById('askInputs');
 
+            let initialOrderbook = [];
+            let midPrice = 0;
+
             function calculatePriceScore(pd) {
                 const typicalDistance = 6; // 1 bps
                 const nd = pd / typicalDistance;
@@ -180,6 +175,33 @@
             function calculateTOBE(pd, quantity) {
                 const priceScore = calculatePriceScore(pd);
                 return priceScore * quantity;
+            }
+
+            async function fetchThalexOrderbook() {
+                try {
+                    const response = await fetch('https://thalex.com/api/v2/public/book?instrument_name=BTC-PERPETUAL');
+                    const data = await response.json();
+                    if (data.result) {
+                        const bids = data.result.bids.slice(0, 5);
+                        const asks = data.result.asks.slice(0, 5);
+                        midPrice = (bids[0][0] + asks[0][0]) / 2;
+                        
+                        initialOrderbook = [
+                            ...bids.map(([price, quantity]) => ({
+                                price,
+                                quantity,
+                                tobe: calculateTOBE(Math.abs(price - midPrice), quantity)
+                            })),
+                            { price: midPrice, quantity: 0, tobe: 0, isMidprice: true },
+                            ...asks.map(([price, quantity]) => ({
+                                price,
+                                quantity,
+                                tobe: calculateTOBE(Math.abs(price - midPrice), quantity)
+                            }))
+                        ];
+                        initialOrderbook.sort((a, b) => b.price - a.price);
+                        updateOriginalOrderbook();
+                    }
             }
 
             function updateOriginalOrderbook() {
@@ -194,7 +216,7 @@
                     if (order.isMidprice) {
                         row.classList.add('midprice');
                     }
-                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
+                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price.toFixed(2)}` : order.price.toFixed(2);
                     row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
                     row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
                     row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / tobeSum).toFixed(1) + '%';
@@ -238,7 +260,6 @@
 
                 let newOrderbook = JSON.parse(JSON.stringify(initialOrderbook));
                 let newOrdersTOBE = 0;
-                const midPrice = 59997;
 
                 function addOrder(price, size, side) {
                     const pd = Math.abs(price - midPrice);
@@ -259,12 +280,12 @@
                 }
 
                 bidLayers.forEach(layer => {
-                    const price = midPrice - Math.round(layer.spread * 3);
+                    const price = midPrice - (layer.spread * midPrice / 10000);
                     addOrder(price, layer.size, 'bid');
                 });
 
                 askLayers.forEach(layer => {
-                    const price = midPrice + Math.round(layer.spread * 3);
+                    const price = midPrice + (layer.spread * midPrice / 10000);
                     addOrder(price, layer.size, 'ask');
                 });
 
@@ -282,7 +303,7 @@
                     if (order.isMidprice) {
                         row.classList.add('midprice');
                     }
-                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
+                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price.toFixed(2)}` : order.price.toFixed(2);
                     row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
                     row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
                     row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(1) + '%';
@@ -301,9 +322,10 @@
             addBidLayerButton.addEventListener('click', () => addOrderLayer('bid'));
             addAskLayerButton.addEventListener('click', () => addOrderLayer('ask'));
             confirmButton.addEventListener('click', updateOrderbook);
+            refreshOrderbookButton.addEventListener('click', fetchThalexOrderbook);
 
-            // Initialize the original orderbook
-            updateOriginalOrderbook();
+            // Initialize by fetching the Thalex orderbook
+            fetchThalexOrderbook();
         });
     </script>
 </body>
