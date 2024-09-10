@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thalex MQP Simulation for BTC-Perp</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: right;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        input {
+            width: 100px;
+            margin-right: 10px;
+        }
+        #controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .new-order {
+            background-color: #fffacd;
+        }
+        .midprice {
+            font-weight: bold;
+            background-color: #e6f3ff;
+        }
+        #rewardsAnalysis {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Thalex MQP Simulation for BTC-Perp</h1>
+    <div id="controls">
+        <label for="bidSize">Bid Size:</label>
+        <input type="number" id="bidSize" value="0.4" step="0.1" min="0">
+        
+        <label for="askSize">Ask Size:</label>
+        <input type="number" id="askSize" value="0.4" step="0.1" min="0">
+        
+        <label for="spread">Spread (bps):</label>
+        <input type="number" id="spread" value="1" step="0.5" min="0.5">
+        
+        <button id="confirmButton">Confirm</button>
+    </div>
+    <h2>Example orderbook</h2>
+    <table id="originalOrderbook">
+        <thead>
+            <tr>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>TOBE</th>
+                <th>MQS (%)</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div id="originalTobeSum"></div>
+    <h2>Updated orderbook with additional quotes</h2>
+    <table id="updatedOrderbook">
+        <thead>
+            <tr>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>TOBE</th>
+                <th>MQS (%)</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div id="updatedTobeSum"></div>
+    <div id="rewardsAnalysis"></div>
+
+    <script>
+        const initialOrderbook = [
+            { price: 60004, quantity: 0.4, tobe: 0.178179744 },
+            { price: 60002, quantity: 0.4, tobe: 0.22449241 },
+            { price: 60000, quantity: 0.4, tobe: 0.282842712 },
+            { price: 59997, quantity: 0, tobe: 0, isMidprice: true },
+            { price: 59994, quantity: 0.4, tobe: 0.282842712 },
+            { price: 59992, quantity: 0.4, tobe: 0.22449241 },
+            { price: 59990, quantity: 0.4, tobe: 0.178179744 },
+        ];
+
+        const bidSizeInput = document.getElementById('bidSize');
+        const askSizeInput = document.getElementById('askSize');
+        const spreadInput = document.getElementById('spread');
+        const confirmButton = document.getElementById('confirmButton');
+        const originalOrderbookTable = document.getElementById('originalOrderbook').getElementsByTagName('tbody')[0];
+        const updatedOrderbookTable = document.getElementById('updatedOrderbook').getElementsByTagName('tbody')[0];
+        const originalTobeSumDiv = document.getElementById('originalTobeSum');
+        const updatedTobeSumDiv = document.getElementById('updatedTobeSum');
+        const rewardsAnalysisDiv = document.getElementById('rewardsAnalysis');
+
+        function calculatePriceScore(pd) {
+            const typicalDistance = 6; // 1 bps
+            const nd = pd / typicalDistance;
+            return Math.pow(0.5, nd);
+        }
+
+        function calculateTOBE(pd, quantity) {
+            const priceScore = calculatePriceScore(pd);
+            return priceScore * quantity;
+        }
+
+        function updateOriginalOrderbook() {
+            originalOrderbookTable.innerHTML = '';
+            let tobeSum = 0;
+            initialOrderbook.forEach(order => {
+                tobeSum += order.tobe;
+            });
+            
+            initialOrderbook.forEach(order => {
+                const row = originalOrderbookTable.insertRow();
+                if (order.isMidprice) {
+                    row.classList.add('midprice');
+                }
+                row.insertCell(0).textContent = order.isMidprice ? 'Midprice' : order.price;
+                row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
+                row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
+                row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / tobeSum).toFixed(1) + '%';
+            });
+            originalTobeSumDiv.textContent = `Original TOBEsum: ${tobeSum.toFixed(2)}`;
+        }
+
+        function updateOrderbook() {
+            const bidSize = parseFloat(bidSizeInput.value);
+            const askSize = parseFloat(askSizeInput.value);
+            const spread = parseFloat(spreadInput.value);
+            const midPrice = 59997;
+            const spreadAmount = Math.round(spread * 3); // Half of the full spread (3$ per 1bps)
+            const newBidPrice = midPrice - spreadAmount;
+            const newAskPrice = midPrice + spreadAmount;
+
+            let newOrderbook = JSON.parse(JSON.stringify(initialOrderbook));
+            let newOrdersTOBE = 0;
+            
+            // Add or aggregate new bid
+            const newBidIndex = newOrderbook.findIndex(order => order.price === newBidPrice);
+            const newBidPD = Math.abs(newBidPrice - midPrice);
+            const newBidTOBE = calculateTOBE(newBidPD, bidSize);
+            if (newBidIndex !== -1) {
+                newOrderbook[newBidIndex].quantity += bidSize;
+                newOrderbook[newBidIndex].tobe += newBidTOBE;
+                newOrderbook[newBidIndex].isNew = true;
+            } else {
+                const insertIndex = newOrderbook.findIndex(order => order.price < newBidPrice);
+                newOrderbook.splice(insertIndex, 0, { price: newBidPrice, quantity: bidSize, tobe: newBidTOBE, isNew: true });
+            }
+            newOrdersTOBE += newBidTOBE;
+
+            // Add or aggregate new ask
+            const newAskIndex = newOrderbook.findIndex(order => order.price === newAskPrice);
+            const newAskPD = Math.abs(newAskPrice - midPrice);
+            const newAskTOBE = calculateTOBE(newAskPD, askSize);
+            if (newAskIndex !== -1) {
+                newOrderbook[newAskIndex].quantity += askSize;
+                newOrderbook[newAskIndex].tobe += newAskTOBE;
+                newOrderbook[newAskIndex].isNew = true;
+            } else {
+                const insertIndex = newOrderbook.findIndex(order => order.price > newAskPrice);
+                newOrderbook.splice(insertIndex, 0, { price: newAskPrice, quantity: askSize, tobe: newAskTOBE, isNew: true });
+            }
+            newOrdersTOBE += newAskTOBE;
+
+            // Sort the orderbook by price, descending order
+            newOrderbook.sort((a, b) => b.price - a.price);
+
+            updatedOrderbookTable.innerHTML = '';
+            let updatedTobeSum = 0;
+            newOrderbook.forEach(order => updatedTobeSum += order.tobe);
+
+            newOrderbook.forEach(order => {
+                const row = updatedOrderbookTable.insertRow();
+                if (order.isNew) {
+                    row.classList.add('new-order');
+                }
+                if (order.isMidprice) {
+                    row.classList.add('midprice');
+                }
+                row.insertCell(0).textContent = order.isMidprice ? 'Midprice' : order.price;
+                row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
+                row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
+                row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(1) + '%';
+            });
+
+            updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(2)}`;
+
+            const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(1);
+            rewardsAnalysisDiv.innerHTML = `
+                <h3>Rewards analysis for new orders</h3>
+                <p>TOBE from new orders: ${newOrdersTOBE.toFixed(2)}</p>
+                <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snapshots</p>
+            `;
+        }
+
+        confirmButton.addEventListener('click', updateOrderbook);
+
+        updateOriginalOrderbook();
+    </script>
+</body>
+</html>
