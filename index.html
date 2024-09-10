@@ -359,10 +359,14 @@
 
     newOrderbook.sort((a, b) => b.price - a.price);
 
-    // Recalculate midprice
+    // Find the highest bid and lowest ask that are not midprice
     const highestBid = newOrderbook.find(order => !order.isMidprice && order.price < midPrice);
     const lowestAsk = newOrderbook.find(order => !order.isMidprice && order.price > midPrice);
-    const newMidPrice = Math.round((highestBid.price + lowestAsk.price) / 2);
+
+    // Only update midprice if the top of the book prices have changed
+    const newMidPrice = (highestBid.price !== initialOrderbook[0].price || lowestAsk.price !== initialOrderbook[initialOrderbook.length - 1].price)
+        ? Math.round((highestBid.price + lowestAsk.price) / 2)
+        : midPrice;
 
     // Recalculate TOBE for all orders
     newOrderbook.forEach(order => {
