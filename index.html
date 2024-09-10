@@ -98,7 +98,7 @@
                     <input type="number" id="bidSize1" class="bidSize" value="0.4" step="0.1" min="0">
                 </div>
                 <div class="inputGroup">
-                    <label for="bidSpread1">Fullspread (bps):</label>
+                    <label for="bidSpread1">Distance to Midprice (bps):</label>
                     <input type="number" id="bidSpread1" class="bidSpread" value="1" step="0.5" min="0.5">
                 </div>
             </div>
@@ -113,7 +113,7 @@
                     <input type="number" id="askSize1" class="askSize" value="0.4" step="0.1" min="0">
                 </div>
                 <div class="inputGroup">
-                    <label for="askSpread1">Fullspread (bps):</label>
+                    <label for="askSpread1">Distance to Midprice (bps):</label>
                     <input type="number" id="askSpread1" class="askSpread" value="1" step="0.5" min="0.5">
                 </div>
             </div>
@@ -166,14 +166,14 @@
             let initialOrderbook = [];
             let midPrice = 0;
 
-            function calculatePriceScore(pd) {
-                const typicalDistance = 6; // 1 bps
+            function calculatePriceScore(pd, midPrice) {
+                const typicalDistance = midPrice * 0.0001; // 1 bps of midPrice
                 const nd = pd / typicalDistance;
                 return Math.pow(0.5, nd);
             }
 
-            function calculateTOBE(pd, quantity) {
-                const priceScore = calculatePriceScore(pd);
+            function calculateTOBE(pd, quantity, midPrice) {
+                const priceScore = calculatePriceScore(pd, midPrice);
                 return priceScore * quantity;
             }
 
@@ -186,6 +186,7 @@
                     const data = await response.json();
                     if (data.result) {
                         processOrderbookData(data);
+                        alert('Orderbook refreshed successfully!');
                     } else {
                         throw new Error('No result in API response');
                     }
@@ -196,7 +197,7 @@
                         console.error('Response status:', error.response.status);
                         console.error('Response text:', await error.response.text());
                     }
-                    // Use mock data as a fallback
+                    alert('Failed to refresh orderbook. Using mock data.');
                     useMockData();
                 }
             }
@@ -212,25 +213,41 @@
             }
 
             function processOrderbookData(data) {
-                const bids = data.result.bids.slice(0, 5);
-                const asks = data.result.asks.slice(0, 5);
-                midPrice = (bids[0][0] + asks[0][0]) / 2;
+                const bids = data.result.bids.slice(0, 5).map(([price, quantity]) => [Math.floor(price), quantity]);
+                const asks = data.result.asks.slice(0, 5).map(([price, quantity]) => [Math.ceil(price), quantity]);
+                midPrice = Math.round((bids[0][0] + asks[0][0]) / 2);
                 
                 initialOrderbook = [
                     ...bids.map(([price, quantity]) => ({
                         price,
                         quantity,
-                        tobe: calculateTOBE(Math.abs(price - midPrice), quantity)
+                        tobe: calculateTOBE(Math.abs(price - midPrice), quantity, midPrice)
                     })),
                     { price: midPrice, quantity: 0, tobe: 0, isMidprice: true },
                     ...asks.map(([price, quantity]) => ({
                         price,
                         quantity,
-                        tobe: calculateTOBE(Math.abs(price - midPrice), quantity)
+                        tobe: calculateTOBE(Math.abs(price - midPrice), quantity, midPrice)
                     }))
                 ];
                 initialOrderbook.sort((a, b) => b.price - a.price);
                 updateOriginalOrderbook();
+            }
+
+            function calculateMonthlyRewards(tobe) {
+                const minThreshold = 0.5;
+                const maxThreshold = 3.0;
+                const maxRewards = 30000;
+                const minRewards = 0;
+
+                if (tobe <= minThreshold) return minRewards;
+                if (tobe >= maxThreshold) return maxRewards;
+
+                const rewardRange = maxRewards - minRewards;
+                const tobeRange = maxThreshold - minThreshold;
+                const rewardPerTobe = rewardRange / tobeRange;
+
+                return (tobe - minThreshold) * rewardPerTobe;
             }
 
             function updateOriginalOrderbook() {
@@ -247,12 +264,13 @@
                     if (order.isMidprice) {
                         row.classList.add('midprice');
                     }
-                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price.toFixed(2)}` : order.price.toFixed(2);
+                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
                     row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(3);
-                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(6);
+                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
                     row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / tobeSum).toFixed(2) + '%';
                 });
-                originalTobeSumDiv.textContent = `Original TOBEsum: ${tobeSum.toFixed(6)}`;
+                const originalMonthlyRewards = calculateMonthlyRewards(tobeSum);
+                originalTobeSumDiv.textContent = `Original TOBEsum: ${tobeSum.toFixed(2)} | Monthly Rewards: $${originalMonthlyRewards.toFixed(2)}`;
             }
 
             function addOrderLayer(side) {
@@ -266,7 +284,7 @@
                         <input type="number" id="${side}Size${layerCount}" class="${side}Size" value="0.4" step="0.1" min="0">
                     </div>
                     <div class="inputGroup">
-                        <label for="${side}Spread${layerCount}">Fullspread (bps):</label>
+                        <label for="${side}Spread${layerCount}">Distance to Midprice (bps):</label>
                         <input type="number" id="${side}Spread${layerCount}" class="${side}Spread" value="1" step="0.5" min="0.5">
                     </div>
                     <button class="removeLayer">Remove</button>
@@ -293,8 +311,9 @@
                 let newOrdersTOBE = 0;
 
                 function addOrder(price, size, side) {
+                    price = side === 'bid' ? Math.floor(price) : Math.ceil(price);
                     const pd = Math.abs(price - midPrice);
-                    const tobe = calculateTOBE(pd, size);
+                    const tobe = calculateTOBE(pd, size, midPrice);
                     const existingOrderIndex = newOrderbook.findIndex(order => order.price === price);
                     
                     if (existingOrderIndex !== -1) {
@@ -338,19 +357,26 @@
                     if (order.isMidprice) {
                         row.classList.add('midprice');
                     }
-                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price.toFixed(2)}` : order.price.toFixed(2);
+                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
                     row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(3);
-                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(6);
+                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
                     row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(2) + '%';
                 });
 
-                updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(6)}`;
+                const originalTOBEsum = initialOrderbook.reduce((sum, order) => sum + (order.isMidprice ? 0 : order.tobe), 0);
+                const updatedMonthlyRewards = calculateMonthlyRewards(updatedTobeSum);
+                const originalMonthlyRewards = calculateMonthlyRewards(originalTOBEsum);
+                const newOrdersMonthlyRewards = updatedMonthlyRewards - originalMonthlyRewards;
+
+                updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(2)} | Monthly Rewards: $${updatedMonthlyRewards.toFixed(2)}`;
 
                 const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(2);
                 rewardsAnalysisDiv.innerHTML = `
                     <h3>Rewards analysis for new orders</h3>
-                    <p>TOBE from new orders: ${newOrdersTOBE.toFixed(6)}</p>
-                    <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snap`;
+                    <p>TOBE from new orders: ${newOrdersTOBE.toFixed(2)}</p>
+                    <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snap</p>
+                    <p>Estimated monthly rewards for new orders: $${newOrdersMonthlyRewards.toFixed(2)}</p>
+                `;
             }
 
             addBidLayerButton.addEventListener('click', () => addOrderLayer('bid'));
