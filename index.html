@@ -128,7 +128,7 @@
                 <th>Price</th>
                 <th>Quantity</th>
                 <th>TOBE</th>
-                <th>MQS (%)</th>
+                <th>TOBE%</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -141,7 +141,7 @@
                 <th>Price</th>
                 <th>Quantity</th>
                 <th>TOBE</th>
-                <th>MQS (%)</th>
+                <th>TOBE%</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -354,57 +354,69 @@
 
                 askLayers.forEach(layer => {
                     const price = midPrice * (1 + layer.spread / 10000);
-                    addOrder(price, layer.size, 'ask');
-                });
+        addOrder(price, layer.size, 'ask');
+    });
 
-                newOrderbook.sort((a, b) => b.price - a.price);
+    newOrderbook.sort((a, b) => b.price - a.price);
 
-                updatedOrderbookTable.innerHTML = '';
-                let updatedTobeSum = 0;
-                newOrderbook.forEach(order => {
-                    if (!order.isMidprice) {
-                        updatedTobeSum += order.tobe;
-                    }
-                });
+    // Recalculate midprice
+    const highestBid = newOrderbook.find(order => !order.isMidprice && order.price < midPrice);
+    const lowestAsk = newOrderbook.find(order => !order.isMidprice && order.price > midPrice);
+    const newMidPrice = Math.round((highestBid.price + lowestAsk.price) / 2);
 
-                newOrderbook.forEach(order => {
-                    const row = updatedOrderbookTable.insertRow();
-                    if (order.isNew) {
-                        row.classList.add('new-order');
-                    }
-                    if (order.isMidprice) {
-                        row.classList.add('midprice');
-                    }
-                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
-                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(3);
-                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
-                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(2) + '%';
-                });
+    // Recalculate TOBE for all orders
+    newOrderbook.forEach(order => {
+        if (!order.isMidprice) {
+            const pd = Math.abs(order.price - newMidPrice);
+            order.tobe = calculateTOBE(pd, order.quantity, newMidPrice);
+        }
+    });
 
-                const originalTOBEsum = initialOrderbook.reduce((sum, order) => sum + (order.isMidprice ? 0 : order.tobe), 0);
-                const updatedMonthlyRewards = calculateMonthlyRewards(updatedTobeSum);
-                const originalMonthlyRewards = calculateMonthlyRewards(originalTOBEsum);
-                const newOrdersMonthlyRewards = updatedMonthlyRewards - originalMonthlyRewards;
+    // Update midprice order
+    const midpriceIndex = newOrderbook.findIndex(order => order.isMidprice);
+    newOrderbook[midpriceIndex].price = newMidPrice;
 
-                updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(2)} | Monthly Rewards: $${updatedMonthlyRewards.toFixed(2)}`;
+    updatedOrderbookTable.innerHTML = '';
+    let updatedTobeSum = newOrderbook.reduce((sum, order) => sum + (order.isMidprice ? 0 : order.tobe), 0);
 
-                const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(2);
-                rewardsAnalysisDiv.innerHTML = `
-                    <h3>Rewards analysis for new orders</h3>
-                    <p>TOBE from new orders: ${newOrdersTOBE.toFixed(2)}</p>
-                    <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snap</p>
-                    <p>Estimated monthly rewards for new orders: $${newOrdersMonthlyRewards.toFixed(2)}</p>
-                `;
-            }
+    newOrderbook.forEach(order => {
+        const row = updatedOrderbookTable.insertRow();
+        if (order.isNew) {
+            row.classList.add('new-order');
+        }
+        if (order.isMidprice) {
+            row.classList.add('midprice');
+        }
+        row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
+        row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(3);
+        row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
+        row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(2) + '%';
+    });
 
-            addBidLayerButton.addEventListener('click', () => addOrderLayer('bid'));
-            addAskLayerButton.addEventListener('click', () => addOrderLayer('ask'));
-            confirmButton.addEventListener('click', updateOrderbook);
-            refreshOrderbookButton.addEventListener('click', fetchThalexOrderbook);
+    const updatedMonthlyRewards = calculateMonthlyRewards(updatedTobeSum);
+    const originalTOBEsum = initialOrderbook.reduce((sum, order) => sum + (order.isMidprice ? 0 : order.tobe), 0);
+    const originalMonthlyRewards = calculateMonthlyRewards(originalTOBEsum);
+    const newOrdersMonthlyRewards = updatedMonthlyRewards - originalMonthlyRewards;
 
-            // Initialize by fetching the Thalex orderbook
-            fetchThalexOrderbook();
-        });
-    </script>
+    updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(2)} | Monthly Rewards: $${updatedMonthlyRewards.toFixed(2)}`;
+
+    const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(2);
+    rewardsAnalysisDiv.innerHTML = `
+        <h3>Rewards analysis for new orders</h3>
+        <p>TOBE from new orders: ${newOrdersTOBE.toFixed(2)}</p>
+        <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snap</p>
+        <p>Estimated monthly rewards for new orders: $${newOrdersMonthlyRewards.toFixed(2)}</p>
+    `;
+}
+
+addBidLayerButton.addEventListener('click', () => addOrderLayer('bid'));
+addAskLayerButton.addEventListener('click', () => addOrderLayer('ask'));
+confirmButton.addEventListener('click', updateOrderbook);
+refreshOrderbookButton.addEventListener('click', fetchThalexOrderbook);
+
+// Initialize by fetching the Thalex orderbook
+fetchThalexOrderbook();
+});
+</script>
 </body>
 </html>
