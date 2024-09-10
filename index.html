@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thalex MQP Simulation for BTC-Perp</title>
+    <title>Functional Thalex MQP Simulation for BTC-Perp</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -25,8 +25,9 @@
             background-color: #f2f2f2;
         }
         input {
-            width: 100px;
-            margin-right: 10px;
+            width: 80px;
+            padding: 5px;
+            margin: 0;
         }
         #controls {
             margin-bottom: 20px;
@@ -37,6 +38,7 @@
             color: white;
             border: none;
             cursor: pointer;
+            margin: 5px;
         }
         button:hover {
             background-color: #45a049;
@@ -54,22 +56,70 @@
             background-color: #f0f0f0;
             border-radius: 5px;
         }
+        .orderLayer {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #orderInputs {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        #bidInputs, #askInputs {
+            width: 48%;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            margin-right: 10px;
+            text-align: right;
+        }
+        .inputGroup {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .removeLayer {
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
-    <h1>Thalex MQP Simulation for BTC-Perp</h1>
-    <div id="controls">
-        <label for="bidSize">Bid Size:</label>
-        <input type="number" id="bidSize" value="0.4" step="0.1" min="0">
+    <h1>Functional Thalex MQP Simulation for BTC-Perp</h1>
+    <div id="orderInputs">
+        <div id="bidInputs">
+            <h3>Bid Orders</h3>
+            <button id="addBidLayer">Add Bid Layer</button>
+            <div class="bidLayer orderLayer">
+                <div class="inputGroup">
+                    <label for="bidSize1">Bid Size:</label>
+                    <input type="number" id="bidSize1" class="bidSize" value="0.4" step="0.1" min="0">
+                </div>
+                <div class="inputGroup">
+                    <label for="bidSpread1">Fullspread (bps):</label>
+                    <input type="number" id="bidSpread1" class="bidSpread" value="1" step="0.5" min="0.5">
+                </div>
+            </div>
+        </div>
         
-        <label for="askSize">Ask Size:</label>
-        <input type="number" id="askSize" value="0.4" step="0.1" min="0">
-        
-        <label for="spread">Spread (bps):</label>
-        <input type="number" id="spread" value="1" step="0.5" min="0.5">
-        
-        <button id="confirmButton">Confirm</button>
+        <div id="askInputs">
+            <h3>Ask Orders</h3>
+            <button id="addAskLayer">Add Ask Layer</button>
+            <div class="askLayer orderLayer">
+                <div class="inputGroup">
+                    <label for="askSize1">Ask Size:</label>
+                    <input type="number" id="askSize1" class="askSize" value="0.4" step="0.1" min="0">
+                </div>
+                <div class="inputGroup">
+                    <label for="askSpread1">Fullspread (bps):</label>
+                    <input type="number" id="askSpread1" class="askSpread" value="1" step="0.5" min="0.5">
+                </div>
+            </div>
+        </div>
     </div>
+    <button id="confirmButton">Confirm</button>
     <h2>Example orderbook</h2>
     <table id="originalOrderbook">
         <thead>
@@ -99,131 +149,162 @@
     <div id="rewardsAnalysis"></div>
 
     <script>
-        const initialOrderbook = [
-            { price: 60004, quantity: 0.4, tobe: 0.178179744 },
-            { price: 60002, quantity: 0.4, tobe: 0.22449241 },
-            { price: 60000, quantity: 0.4, tobe: 0.282842712 },
-            { price: 59997, quantity: 0, tobe: 0, isMidprice: true },
-            { price: 59994, quantity: 0.4, tobe: 0.282842712 },
-            { price: 59992, quantity: 0.4, tobe: 0.22449241 },
-            { price: 59990, quantity: 0.4, tobe: 0.178179744 },
-        ];
+        document.addEventListener('DOMContentLoaded', function() {
+            const initialOrderbook = [
+                { price: 60004, quantity: 0.4, tobe: 0.178179744 },
+                { price: 60002, quantity: 0.4, tobe: 0.22449241 },
+                { price: 60000, quantity: 0.4, tobe: 0.282842712 },
+                { price: 59997, quantity: 0, tobe: 0, isMidprice: true },
+                { price: 59994, quantity: 0.4, tobe: 0.282842712 },
+                { price: 59992, quantity: 0.4, tobe: 0.22449241 },
+                { price: 59990, quantity: 0.4, tobe: 0.178179744 },
+            ];
 
-        const bidSizeInput = document.getElementById('bidSize');
-        const askSizeInput = document.getElementById('askSize');
-        const spreadInput = document.getElementById('spread');
-        const confirmButton = document.getElementById('confirmButton');
-        const originalOrderbookTable = document.getElementById('originalOrderbook').getElementsByTagName('tbody')[0];
-        const updatedOrderbookTable = document.getElementById('updatedOrderbook').getElementsByTagName('tbody')[0];
-        const originalTobeSumDiv = document.getElementById('originalTobeSum');
-        const updatedTobeSumDiv = document.getElementById('updatedTobeSum');
-        const rewardsAnalysisDiv = document.getElementById('rewardsAnalysis');
+            const confirmButton = document.getElementById('confirmButton');
+            const originalOrderbookTable = document.getElementById('originalOrderbook').getElementsByTagName('tbody')[0];
+            const updatedOrderbookTable = document.getElementById('updatedOrderbook').getElementsByTagName('tbody')[0];
+            const originalTobeSumDiv = document.getElementById('originalTobeSum');
+            const updatedTobeSumDiv = document.getElementById('updatedTobeSum');
+            const rewardsAnalysisDiv = document.getElementById('rewardsAnalysis');
+            const addBidLayerButton = document.getElementById('addBidLayer');
+            const addAskLayerButton = document.getElementById('addAskLayer');
+            const bidInputsDiv = document.getElementById('bidInputs');
+            const askInputsDiv = document.getElementById('askInputs');
 
-        function calculatePriceScore(pd) {
-            const typicalDistance = 6; // 1 bps
-            const nd = pd / typicalDistance;
-            return Math.pow(0.5, nd);
-        }
-
-        function calculateTOBE(pd, quantity) {
-            const priceScore = calculatePriceScore(pd);
-            return priceScore * quantity;
-        }
-
-        function updateOriginalOrderbook() {
-            originalOrderbookTable.innerHTML = '';
-            let tobeSum = 0;
-            initialOrderbook.forEach(order => {
-                tobeSum += order.tobe;
-            });
-            
-            initialOrderbook.forEach(order => {
-                const row = originalOrderbookTable.insertRow();
-                if (order.isMidprice) {
-                    row.classList.add('midprice');
-                }
-                row.insertCell(0).textContent = order.isMidprice ? 'Midprice' : order.price;
-                row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
-                row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
-                row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / tobeSum).toFixed(1) + '%';
-            });
-            originalTobeSumDiv.textContent = `Original TOBEsum: ${tobeSum.toFixed(2)}`;
-        }
-
-        function updateOrderbook() {
-            const bidSize = parseFloat(bidSizeInput.value);
-            const askSize = parseFloat(askSizeInput.value);
-            const spread = parseFloat(spreadInput.value);
-            const midPrice = 59997;
-            const spreadAmount = Math.round(spread * 3); // Half of the full spread (3$ per 1bps)
-            const newBidPrice = midPrice - spreadAmount;
-            const newAskPrice = midPrice + spreadAmount;
-
-            let newOrderbook = JSON.parse(JSON.stringify(initialOrderbook));
-            let newOrdersTOBE = 0;
-            
-            // Add or aggregate new bid
-            const newBidIndex = newOrderbook.findIndex(order => order.price === newBidPrice);
-            const newBidPD = Math.abs(newBidPrice - midPrice);
-            const newBidTOBE = calculateTOBE(newBidPD, bidSize);
-            if (newBidIndex !== -1) {
-                newOrderbook[newBidIndex].quantity += bidSize;
-                newOrderbook[newBidIndex].tobe += newBidTOBE;
-                newOrderbook[newBidIndex].isNew = true;
-            } else {
-                const insertIndex = newOrderbook.findIndex(order => order.price < newBidPrice);
-                newOrderbook.splice(insertIndex, 0, { price: newBidPrice, quantity: bidSize, tobe: newBidTOBE, isNew: true });
+            function calculatePriceScore(pd) {
+                const typicalDistance = 6; // 1 bps
+                const nd = pd / typicalDistance;
+                return Math.pow(0.5, nd);
             }
-            newOrdersTOBE += newBidTOBE;
 
-            // Add or aggregate new ask
-            const newAskIndex = newOrderbook.findIndex(order => order.price === newAskPrice);
-            const newAskPD = Math.abs(newAskPrice - midPrice);
-            const newAskTOBE = calculateTOBE(newAskPD, askSize);
-            if (newAskIndex !== -1) {
-                newOrderbook[newAskIndex].quantity += askSize;
-                newOrderbook[newAskIndex].tobe += newAskTOBE;
-                newOrderbook[newAskIndex].isNew = true;
-            } else {
-                const insertIndex = newOrderbook.findIndex(order => order.price > newAskPrice);
-                newOrderbook.splice(insertIndex, 0, { price: newAskPrice, quantity: askSize, tobe: newAskTOBE, isNew: true });
+            function calculateTOBE(pd, quantity) {
+                const priceScore = calculatePriceScore(pd);
+                return priceScore * quantity;
             }
-            newOrdersTOBE += newAskTOBE;
 
-            // Sort the orderbook by price, descending order
-            newOrderbook.sort((a, b) => b.price - a.price);
+            function updateOriginalOrderbook() {
+                originalOrderbookTable.innerHTML = '';
+                let tobeSum = 0;
+                initialOrderbook.forEach(order => {
+                    tobeSum += order.tobe;
+                });
+                
+                initialOrderbook.forEach(order => {
+                    const row = originalOrderbookTable.insertRow();
+                    if (order.isMidprice) {
+                        row.classList.add('midprice');
+                    }
+                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
+                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
+                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
+                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / tobeSum).toFixed(1) + '%';
+                });
+                originalTobeSumDiv.textContent = `Original TOBEsum: ${tobeSum.toFixed(2)}`;
+            }
 
-            updatedOrderbookTable.innerHTML = '';
-            let updatedTobeSum = 0;
-            newOrderbook.forEach(order => updatedTobeSum += order.tobe);
+            function addOrderLayer(side) {
+                const container = side === 'bid' ? bidInputsDiv : askInputsDiv;
+                const layerCount = container.querySelectorAll(`.${side}Layer`).length + 1;
+                const newLayer = document.createElement('div');
+                newLayer.className = `${side}Layer orderLayer`;
+                newLayer.innerHTML = `
+                    <div class="inputGroup">
+                        <label for="${side}Size${layerCount}">${side.charAt(0).toUpperCase() + side.slice(1)} Size:</label>
+                        <input type="number" id="${side}Size${layerCount}" class="${side}Size" value="0.4" step="0.1" min="0">
+                    </div>
+                    <div class="inputGroup">
+                        <label for="${side}Spread${layerCount}">Fullspread (bps):</label>
+                        <input type="number" id="${side}Spread${layerCount}" class="${side}Spread" value="1" step="0.5" min="0.5">
+                    </div>
+                    <button class="removeLayer">Remove</button>
+                `;
+                container.appendChild(newLayer);
+                
+                newLayer.querySelector('.removeLayer').addEventListener('click', function() {
+                    container.removeChild(newLayer);
+                });
+            }
 
-            newOrderbook.forEach(order => {
-                const row = updatedOrderbookTable.insertRow();
-                if (order.isNew) {
-                    row.classList.add('new-order');
+            function updateOrderbook() {
+                const bidLayers = Array.from(document.querySelectorAll('.bidLayer')).map(layer => ({
+                    size: parseFloat(layer.querySelector('.bidSize').value),
+                    spread: parseFloat(layer.querySelector('.bidSpread').value)
+                }));
+                
+                const askLayers = Array.from(document.querySelectorAll('.askLayer')).map(layer => ({
+                    size: parseFloat(layer.querySelector('.askSize').value),
+                    spread: parseFloat(layer.querySelector('.askSpread').value)
+                }));
+
+                let newOrderbook = JSON.parse(JSON.stringify(initialOrderbook));
+                let newOrdersTOBE = 0;
+                const midPrice = 59997;
+
+                function addOrder(price, size, side) {
+                    const pd = Math.abs(price - midPrice);
+                    const tobe = calculateTOBE(pd, size);
+                    const existingOrderIndex = newOrderbook.findIndex(order => order.price === price);
+                    
+                    if (existingOrderIndex !== -1) {
+                        newOrderbook[existingOrderIndex].quantity += size;
+                        newOrderbook[existingOrderIndex].tobe += tobe;
+                        newOrderbook[existingOrderIndex].isNew = true;
+                    } else {
+                        const insertIndex = newOrderbook.findIndex(order => 
+                            (side === 'bid' && order.price < price) || (side === 'ask' && order.price > price)
+                        );
+                        newOrderbook.splice(insertIndex, 0, { price, quantity: size, tobe, isNew: true });
+                    }
+                    newOrdersTOBE += tobe;
                 }
-                if (order.isMidprice) {
-                    row.classList.add('midprice');
-                }
-                row.insertCell(0).textContent = order.isMidprice ? 'Midprice' : order.price;
-                row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
-                row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
-                row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(1) + '%';
-            });
 
-            updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(2)}`;
+                bidLayers.forEach(layer => {
+                    const price = midPrice - Math.round(layer.spread * 3);
+                    addOrder(price, layer.size, 'bid');
+                });
 
-            const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(1);
-            rewardsAnalysisDiv.innerHTML = `
-                <h3>Rewards analysis for new orders</h3>
-                <p>TOBE from new orders: ${newOrdersTOBE.toFixed(2)}</p>
-                <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snapshots</p>
-            `;
-        }
+                askLayers.forEach(layer => {
+                    const price = midPrice + Math.round(layer.spread * 3);
+                    addOrder(price, layer.size, 'ask');
+                });
 
-        confirmButton.addEventListener('click', updateOrderbook);
+                newOrderbook.sort((a, b) => b.price - a.price);
 
-        updateOriginalOrderbook();
+                updatedOrderbookTable.innerHTML = '';
+                let updatedTobeSum = 0;
+                newOrderbook.forEach(order => updatedTobeSum += order.tobe);
+
+                newOrderbook.forEach(order => {
+                    const row = updatedOrderbookTable.insertRow();
+                    if (order.isNew) {
+                        row.classList.add('new-order');
+                    }
+                    if (order.isMidprice) {
+                        row.classList.add('midprice');
+                    }
+                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
+                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
+                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
+                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(1) + '%';
+                });
+
+                updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(2)}`;
+
+                const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(1);
+                rewardsAnalysisDiv.innerHTML = `
+                    <h3>Rewards analysis for new orders</h3>
+                    <p>TOBE from new orders: ${newOrdersTOBE.toFixed(2)}</p>
+                    <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snapshots</p>
+                `;
+            }
+
+            addBidLayerButton.addEventListener('click', () => addOrderLayer('bid'));
+            addAskLayerButton.addEventListener('click', () => addOrderLayer('ask'));
+            confirmButton.addEventListener('click', updateOrderbook);
+
+            // Initialize the original orderbook
+            updateOriginalOrderbook();
+        });
     </script>
 </body>
 </html>
