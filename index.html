@@ -165,6 +165,7 @@
 
             let initialOrderbook = [];
             let midPrice = 0;
+            let lastOrderbookHash = '';
 
             function calculatePriceScore(pd, midPrice) {
                 const typicalDistance = midPrice * 0.0001; // 1 bps of midPrice
@@ -177,6 +178,10 @@
                 return priceScore * quantity;
             }
 
+            function hashOrderbook(orderbook) {
+                return JSON.stringify(orderbook.bids.slice(0, 5).concat(orderbook.asks.slice(0, 5)));
+            }
+
             async function fetchThalexOrderbook() {
                 const corsProxy = 'https://api.allorigins.win/raw?url=';
                 const thalexApiUrl = 'https://thalex.com/api/v2/public/book?instrument_name=BTC-PERPETUAL';
@@ -185,8 +190,14 @@
                     const response = await fetch(corsProxy + encodeURIComponent(thalexApiUrl));
                     const data = await response.json();
                     if (data.result) {
-                        processOrderbookData(data);
-                        alert('Orderbook refreshed successfully!');
+                        const newOrderbookHash = hashOrderbook(data.result);
+                        if (newOrderbookHash !== lastOrderbookHash) {
+                            processOrderbookData(data);
+                            lastOrderbookHash = newOrderbookHash;
+                            alert('Orderbook refreshed successfully!');
+                        } else {
+                            alert('Orderbook has not changed since the last refresh.');
+                        }
                     } else {
                         throw new Error('No result in API response');
                     }
@@ -209,7 +220,14 @@
                         asks: [[50100, 1], [50200, 2], [50300, 3], [50400, 4], [50500, 5]]
                     }
                 };
-                processOrderbookData(mockData);
+                const newOrderbookHash = hashOrderbook(mockData.result);
+                if (newOrderbookHash !== lastOrderbookHash) {
+                    processOrderbookData(mockData);
+                    lastOrderbookHash = newOrderbookHash;
+                    alert('Mock orderbook data loaded successfully!');
+                } else {
+                    alert('Mock orderbook data has not changed since the last refresh.');
+                }
             }
 
             function processOrderbookData(data) {
