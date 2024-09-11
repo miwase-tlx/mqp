@@ -302,21 +302,8 @@
                 const newBestBid = newOrderbook.find(order => order.quantity > 0 && !order.isMidprice);
                 const newBestAsk = [...newOrderbook].reverse().find(order => order.quantity > 0 && !order.isMidprice);
 
-                // Find original best bid and ask
-                const originalBestBid = initialOrderbook.find(order => !order.isMidprice && order.quantity > 0);
-                const originalBestAsk = [...initialOrderbook].reverse().find(order => !order.isMidprice && order.quantity > 0);
-
-                // Check if there are new best bid or ask prices
-                const hasNewBestBid = newBestBid.price > originalBestBid.price;
-                const hasNewBestAsk = newBestAsk.price < originalBestAsk.price;
-
-                // Recalculate midprice if necessary
-                let newMidPrice;
-                if (hasNewBestBid || hasNewBestAsk) {
-                    newMidPrice = Math.round((newBestBid.price + newBestAsk.price) / 2);
-                } else {
-                    newMidPrice = originalMidPrice;
-                }
+                // Calculate new midprice
+                const newMidPrice = Math.round((newBestBid.price + newBestAsk.price) / 2);
 
                 // Update or insert the midprice order
                 const midpriceIndex = newOrderbook.findIndex(order => order.isMidprice);
@@ -391,6 +378,7 @@
 
             function updateOrderbookChart(orderbook) {
                 const ctx = document.getElementById('orderbookChart').getContext('2d');
+                const midPrice = orderbook.find(order => order.isMidprice).price;
                 const bids = orderbook.filter(order => !order.isMidprice && order.price < midPrice);
                 const asks = orderbook.filter(order => !order.isMidprice && order.price > midPrice);
 
@@ -450,6 +438,7 @@
             }
 
             function updateAdditionalMetrics(orderbook) {
+                const midPrice = orderbook.find(order => order.isMidprice).price;
                 const bids = orderbook.filter(order => !order.isMidprice && order.price < midPrice);
                 const asks = orderbook.filter(order => !order.isMidprice && order.price > midPrice);
 
