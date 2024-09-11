@@ -3,186 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Functional Thalex MQP Simulation for BTC-PERPETUAL</title>
+    <title>Thalex MQP Simulation for BTC-PERPETUAL</title>
     <style>
-        :root {
-            --primary-color: #4CAF50;
-            --hover-color: #45a049;
-            --background-color: #f0f0f0;
-            --border-color: #ddd;
-            --new-order-color: #fffacd;
-            --midprice-color: #e6f3ff;
-        }
-
         body {
             font-family: Arial, sans-serif;
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
-            padding: 1rem;
-            font-size: 16px;
-            line-height: 1.5;
+            padding: 20px;
         }
-
-        h1 {
-            font-size: 1.8rem;
-            margin-bottom: 1rem;
-        }
-
-        h2 {
-            font-size: 1.5rem;
-            margin-top: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
-        h3 {
-            font-size: 1.2rem;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
-        }
-
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
+            margin-bottom: 20px;
         }
-
         th, td {
-            border: 1px solid var(--border-color);
-            padding: 0.5rem;
+            border: 1px solid #ddd;
+            padding: 8px;
             text-align: right;
         }
-
         th {
-            background-color: var(--background-color);
+            background-color: #f2f2f2;
         }
-
         input {
-            width: 100%;
-            padding: 0.5rem;
-            margin: 0.25rem 0;
-            box-sizing: border-box;
+            width: 80px;
+            padding: 5px;
+            margin: 0;
         }
-
+        #controls {
+            margin-bottom: 20px;
+        }
         button {
-            padding: 0.5rem 1rem;
-            background-color: var(--primary-color);
+            padding: 5px 10px;
+            background-color: #4CAF50;
             color: white;
             border: none;
             cursor: pointer;
-            margin: 0.25rem;
-            font-size: 0.9rem;
+            margin: 5px;
         }
-
         button:hover {
-            background-color: var(--hover-color);
+            background-color: #45a049;
         }
-
         .new-order {
-            background-color: var(--new-order-color);
+            background-color: #fffacd;
         }
-
         .midprice {
             font-weight: bold;
-            background-color: var(--midprice-color);
+            background-color: #e6f3ff;
         }
-
         #rewardsAnalysis {
-            margin-top: 1rem;
-            padding: 1rem;
-            background-color: var(--background-color);
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
             border-radius: 5px;
         }
-
         .orderLayer {
-            margin-bottom: 1rem;
-            padding: 1rem;
-            border: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
             border-radius: 5px;
         }
-
         #orderInputs {
             display: flex;
-            flex-wrap: wrap;
             justify-content: space-between;
-            margin-bottom: 1rem;
+            margin-bottom: 20px;
         }
-
         #bidInputs, #askInputs {
-            width: 100%;
-            margin-bottom: 1rem;
+            width: 48%;
         }
-
         label {
             display: inline-block;
-            width: 100%;
-            margin-bottom: 0.25rem;
-            text-align: left;
+            width: 120px;
+            margin-right: 10px;
+            text-align: right;
         }
-
         .inputGroup {
-            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
         }
-
         .removeLayer {
-            margin-top: 0.5rem;
-        }
-
-        @media screen and (min-width: 768px) {
-            body {
-                font-size: 18px;
-            }
-
-            h1 {
-                font-size: 2rem;
-            }
-
-            h2 {
-                font-size: 1.7rem;
-            }
-
-            h3 {
-                font-size: 1.4rem;
-            }
-
-            table {
-                font-size: 1rem;
-            }
-
-            #bidInputs, #askInputs {
-                width: 48%;
-            }
-
-            button {
-                font-size: 1rem;
-            }
-        }
-
-        @media screen and (min-width: 1024px) {
-            body {
-                font-size: 20px;
-            }
-
-            h1 {
-                font-size: 2.2rem;
-            }
-
-            h2 {
-                font-size: 1.9rem;
-            }
-
-            h3 {
-                font-size: 1.6rem;
-            }
-
-            table {
-                font-size: 1.1rem;
-            }
+            margin-left: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>Functional Thalex MQP Simulation for BTC-PERPETUAL</h1>
+    <h1>Thalex MQP Simulation for BTC-PERPETUAL</h1>
     <div id="orderInputs">
         <div id="bidInputs">
             <h3>Bid Orders</h3>
@@ -263,7 +168,7 @@
             let lastOrderbookHash = '';
 
             function calculatePriceScore(pd, midPrice) {
-                const typicalDistance = midPrice * 0.0001; // 1 bps of midPrice
+                const typicalDistance = midPrice * 0.0001;
                 const nd = pd / typicalDistance;
                 return Math.pow(0.5, nd);
             }
@@ -275,54 +180,6 @@
 
             function hashOrderbook(orderbook) {
                 return JSON.stringify(orderbook.bids.slice(0, 5).concat(orderbook.asks.slice(0, 5)));
-            }
-
-            async function fetchThalexOrderbook() {
-                const corsProxy = 'https://api.allorigins.win/raw?url=';
-                const thalexApiUrl = 'https://thalex.com/api/v2/public/book?instrument_name=BTC-PERPETUAL';
-                
-                try {
-                    const response = await fetch(corsProxy + encodeURIComponent(thalexApiUrl));
-                    const data = await response.json();
-                    if (data.result) {
-                        const newOrderbookHash = hashOrderbook(data.result);
-                        if (newOrderbookHash !== lastOrderbookHash) {
-                            processOrderbookData(data);
-                            lastOrderbookHash = newOrderbookHash;
-                            alert('Orderbook refreshed successfully!');
-                        } else {
-                            alert('Orderbook has not changed since the last refresh.');
-                        }
-                    } else {
-                        throw new Error('No result in API response');
-                    }
-                } catch (error) {
-                    console.error('Error fetching Thalex orderbook:', error);
-                    console.error('Error details:', error.message);
-                    if (error.response) {
-                        console.error('Response status:', error.response.status);
-                        console.error('Response text:', await error.response.text());
-                    }
-                    alert('Failed to refresh orderbook. Using mock data.');
-                    useMockData();
-                }
-            }
-
-            function useMockData() {
-                const mockData = {
-                    result: {
-                        bids: [[50000, 1], [49900, 2], [49800, 3], [49700, 4], [49600, 5]],
-                        asks: [[50100, 1], [50200, 2], [50300, 3], [50400, 4], [50500, 5]]
-                    }
-                };
-                const newOrderbookHash = hashOrderbook(mockData.result);
-                if (newOrderbookHash !== lastOrderbookHash) {
-                    processOrderbookData(mockData);
-                    lastOrderbookHash = newOrderbookHash;
-                    alert('Mock orderbook data loaded successfully!');
-                } else {
-                    alert('Mock orderbook data has not changed since the last refresh.');
-                }
             }
 
             function processOrderbookData(data) {
@@ -347,6 +204,54 @@
                 updateOriginalOrderbook();
             }
 
+            function useMockData() {
+                const mockData = {
+                    result: {
+                        bids: [[50000, 1], [49900, 2], [49800, 3], [49700, 4], [49600, 5]],
+                        asks: [[50100, 1], [50200, 2], [50300, 3], [50400, 4], [50500, 5]]
+                    }
+                };
+                processOrderbookData(mockData);
+                console.log('Mock data loaded successfully');
+            }
+
+            function fetchThalexOrderbook() {
+                const corsProxy = 'https://api.allorigins.win/raw?url=';
+                const thalexApiUrl = 'https://thalex.com/api/v2/public/book?instrument_name=BTC-PERPETUAL';
+                
+                console.log('Fetching orderbook...');
+                fetch(corsProxy + encodeURIComponent(thalexApiUrl))
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Received data:', data);
+                        if (data.result) {
+                            const newOrderbookHash = hashOrderbook(data.result);
+                            if (newOrderbookHash !== lastOrderbookHash) {
+                                processOrderbookData(data);
+                                lastOrderbookHash = newOrderbookHash;
+                                console.log('Orderbook refreshed successfully!');
+                                alert('Orderbook refreshed successfully!');
+                            } else {
+                                console.log('Orderbook has not changed since the last refresh.');
+                                alert('Orderbook has not changed since the last refresh.');
+                            }
+                        } else {
+                            throw new Error('No result in API response');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching Thalex orderbook:', error);
+                        console.error('Error details:', error.message);
+                        alert('Failed to refresh orderbook. Using mock data. Check console for details.');
+                        useMockData();
+                    });
+            }
+
             function calculateMonthlyRewards(tobe) {
                 const minThreshold = 0.5;
                 const maxThreshold = 3.0;
@@ -354,7 +259,7 @@
                 const minRewards = 0;
 
                 if (tobe <= minThreshold) return minRewards;
-                if (tobe >= maxThreshold) return maxRewards; 
+                if (tobe >= maxThreshold) return maxRewards;
 
                 const rewardRange = maxRewards - minRewards;
                 const tobeRange = maxThreshold - minThreshold;
@@ -425,55 +330,72 @@
 
                 function addOrder(price, size, side) {
                     price = side === 'bid' ? Math.floor(price) : Math.ceil(price);
-                    const pd = Math.abs(price - midPrice);
-                    const tobe = calculateTOBE(pd, size, midPrice);
                     const existingOrderIndex = newOrderbook.findIndex(order => order.price === price);
                     
                     if (existingOrderIndex !== -1) {
                         newOrderbook[existingOrderIndex].quantity += size;
-                        newOrderbook[existingOrderIndex].tobe += tobe;
                         newOrderbook[existingOrderIndex].isNew = true;
                     } else {
                         const insertIndex = newOrderbook.findIndex(order => 
                             (side === 'bid' && order.price < price) || (side === 'ask' && order.price > price)
                         );
-                        newOrderbook.splice(insertIndex, 0, { price, quantity: size, tobe, isNew: true });
+                        newOrderbook.splice(insertIndex, 0, { price, quantity: size, tobe: 0, isNew: true });
                     }
-                    newOrdersTOBE += tobe;
                 }
 
+                const originalMidPrice = initialOrderbook.find(order => order.isMidprice).price;
+                
                 bidLayers.forEach(layer => {
-                    const price = midPrice * (1 - layer.spread / 10000);
+                    const price = originalMidPrice * (1 - layer.spread / 10000);
                     addOrder(price, layer.size, 'bid');
                 });
 
                 askLayers.forEach(layer => {
-                    const price = midPrice * (1 + layer.spread / 10000);
+                    const price = originalMidPrice * (1 + layer.spread / 10000);
                     addOrder(price, layer.size, 'ask');
                 });
 
                 newOrderbook.sort((a, b) => b.price - a.price);
 
-                // Find the highest bid and lowest ask that are not midprice
-                const highestBid = newOrderbook.find(order => !order.isMidprice && order.price < midPrice);
-                const lowestAsk = newOrderbook.find(order => !order.isMidprice && order.price > midPrice);
+                // Find new best bid and ask
+                const newBestBid = newOrderbook.find(order => order.quantity > 0 && !order.isMidprice);
+                const newBestAsk = [...newOrderbook].reverse().find(order => order.quantity > 0 && !order.isMidprice);
 
-                // Only update midprice if the top of the book prices have changed
-                const newMidPrice = (highestBid.price !== initialOrderbook[0].price || lowestAsk.price !== initialOrderbook[initialOrderbook.length - 1].price)
-                    ? Math.round((highestBid.price + lowestAsk.price) / 2)
-                    : midPrice;
+                // Find original best bid and ask
+                const originalBestBid = initialOrderbook.find(order => !order.isMidprice && order.quantity > 0);
+                const originalBestAsk = [...initialOrderbook].reverse().find(order => !order.isMidprice && order.quantity > 0);
+
+                // Check if there are new best bid or ask prices
+                const hasNewBestBid = newBestBid.price > originalBestBid.price;
+                const hasNewBestAsk = newBestAsk.price < originalBestAsk.price;
+
+                // Recalculate midprice if necessary
+                let newMidPrice;
+                if (hasNewBestBid || hasNewBestAsk) {
+                    newMidPrice = Math.round((newBestBid.price + newBestAsk.price) / 2);
+                } else {
+                    newMidPrice = originalMidPrice;
+                }
+
+                // Update or insert the midprice order
+                const midpriceIndex = newOrderbook.findIndex(order => order.isMidprice);
+                if (midpriceIndex !== -1) {
+                    newOrderbook[midpriceIndex].price = newMidPrice;
+                } else {
+                    const insertIndex = newOrderbook.findIndex(order => order.price < newMidPrice);
+                    newOrderbook.splice(insertIndex, 0, { price: newMidPrice, quantity: 0, tobe: 0, isMidprice: true });
+                }
 
                 // Recalculate TOBE for all orders
                 newOrderbook.forEach(order => {
                     if (!order.isMidprice) {
                         const pd = Math.abs(order.price - newMidPrice);
                         order.tobe = calculateTOBE(pd, order.quantity, newMidPrice);
+                        if (order.isNew) {
+                            newOrdersTOBE += order.tobe;
+                        }
                     }
                 });
-
-                // Update midprice order
-                const midpriceIndex = newOrderbook.findIndex(order => order.isMidprice);
-                newOrderbook[midpriceIndex].price = newMidPrice;
 
                 updatedOrderbookTable.innerHTML = '';
                 let updatedTobeSum = newOrderbook.reduce((sum, order) => sum + (order.isMidprice ? 0 : order.tobe), 0);
