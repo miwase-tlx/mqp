@@ -4,44 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thalex MQP Simulation for BTC-PERPETUAL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: right;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        input {
-            width: 80px;
-            padding: 5px;
-            margin: 0;
-        }
-        #controls {
-            margin-bottom: 20px;
-        }
-        button {
-            padding: 5px 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover {
-            background-color: #45a049;
+        .orderbook-chart {
+            max-width: 600px;
+            margin: 20px auto;
         }
         .new-order {
             background-color: #fffacd;
@@ -50,104 +18,65 @@
             font-weight: bold;
             background-color: #e6f3ff;
         }
-        #rewardsAnalysis {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f0f0f0;
-            border-radius: 5px;
-        }
-        .orderLayer {
-            margin-bottom: 15px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        #orderInputs {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-        #bidInputs, #askInputs {
-            width: 48%;
-        }
-        label {
-            display: inline-block;
-            width: 120px;
-            margin-right: 10px;
-            text-align: right;
-        }
-        .inputGroup {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .removeLayer {
-            margin-left: 10px;
-        }
     </style>
 </head>
 <body>
-    <h1>Thalex MQP Simulation for BTC-PERPETUAL</h1>
-    <div id="orderInputs">
-        <div id="bidInputs">
-            <h3>Bid Orders</h3>
-            <button id="addBidLayer">Add Bid Layer</button>
-            <div class="bidLayer orderLayer">
-                <div class="inputGroup">
-                    <label for="bidSize1">Bid Size:</label>
-                    <input type="number" id="bidSize1" class="bidSize" value="0.4" step="0.1" min="0">
-                </div>
-                <div class="inputGroup">
-                    <label for="bidSpread1">Distance to Midprice (bps):</label>
-                    <input type="number" id="bidSpread1" class="bidSpread" value="1" step="0.5" min="0.5">
-                </div>
+    <div class="container mt-5">
+        <h1 class="mb-4">Thalex MQP Simulation for BTC-PERPETUAL</h1>
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h3>Bid Orders</h3>
+                <button id="addBidLayer" class="btn btn-primary mb-2">Add Bid Layer</button>
+                <div id="bidInputs"></div>
             </div>
+            <div class="col-md-6">
+                <h3>Ask Orders</h3>
+                <button id="addAskLayer" class="btn btn-primary mb-2">Add Ask Layer</button>
+                <div id="askInputs"></div>
+            </div>
+        </div>
+        <button id="confirmButton" class="btn btn-success me-2">Confirm</button>
+        <button id="refreshOrderbook" class="btn btn-secondary">Refresh Orderbook</button>
+        
+        <h2 class="mt-4">Thalex BTC-PERPETUAL Orderbook</h2>
+        <div class="table-responsive">
+            <table id="originalOrderbook" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>TOBE</th>
+                        <th>TOBE%</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div id="originalTobeSum"></div>
+        
+        <h2 class="mt-4">Updated orderbook with additional quotes</h2>
+        <div class="table-responsive">
+            <table id="updatedOrderbook" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>TOBE</th>
+                        <th>TOBE%</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div id="updatedTobeSum"></div>
+        <div id="rewardsAnalysis" class="mt-4 p-3 bg-light"></div>
+        
+        <div class="orderbook-chart">
+            <canvas id="orderbookChart"></canvas>
         </div>
         
-        <div id="askInputs">
-            <h3>Ask Orders</h3>
-            <button id="addAskLayer">Add Ask Layer</button>
-            <div class="askLayer orderLayer">
-                <div class="inputGroup">
-                    <label for="askSize1">Ask Size:</label>
-                    <input type="number" id="askSize1" class="askSize" value="0.4" step="0.1" min="0">
-                </div>
-                <div class="inputGroup">
-                    <label for="askSpread1">Distance to Midprice (bps):</label>
-                    <input type="number" id="askSpread1" class="askSpread" value="1" step="0.5" min="0.5">
-                </div>
-            </div>
-        </div>
+        <div id="additionalMetrics" class="mt-4 p-3 bg-light"></div>
     </div>
-    <button id="confirmButton">Confirm</button>
-    <button id="refreshOrderbook">Refresh Orderbook</button>
-    <h2>Thalex BTC-PERPETUAL Orderbook</h2>
-    <table id="originalOrderbook">
-        <thead>
-            <tr>
-                <th>Price</th>
-                <th>Quantity</th>
-                <th>TOBE</th>
-                <th>TOBE%</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    <div id="originalTobeSum"></div>
-    <h2>Updated orderbook with additional quotes</h2>
-    <table id="updatedOrderbook">
-        <thead>
-            <tr>
-                <th>Price</th>
-                <th>Quantity</th>
-                <th>TOBE</th>
-                <th>TOBE%</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    <div id="updatedTobeSum"></div>
-    <div id="rewardsAnalysis"></div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -162,10 +91,12 @@
             const addAskLayerButton = document.getElementById('addAskLayer');
             const bidInputsDiv = document.getElementById('bidInputs');
             const askInputsDiv = document.getElementById('askInputs');
+            const additionalMetricsDiv = document.getElementById('additionalMetrics');
 
             let initialOrderbook = [];
             let midPrice = 0;
             let lastOrderbookHash = '';
+            let orderbookChart;
 
             function calculatePriceScore(pd, midPrice) {
                 const typicalDistance = midPrice * 0.0001;
@@ -202,6 +133,8 @@
                 ];
                 initialOrderbook.sort((a, b) => b.price - a.price);
                 updateOriginalOrderbook();
+                updateOrderbookChart(initialOrderbook);
+                updateAdditionalMetrics(initialOrderbook);
             }
 
             function useMockData() {
@@ -295,23 +228,26 @@
                 const container = side === 'bid' ? bidInputsDiv : askInputsDiv;
                 const layerCount = container.querySelectorAll(`.${side}Layer`).length + 1;
                 const newLayer = document.createElement('div');
-                newLayer.className = `${side}Layer orderLayer`;
+                newLayer.className = `${side}Layer mb-2`;
                 newLayer.innerHTML = `
-                    <div class="inputGroup">
-                        <label for="${side}Size${layerCount}">${side.charAt(0).toUpperCase() + side.slice(1)} Size:</label>
-                        <input type="number" id="${side}Size${layerCount}" class="${side}Size" value="0.4" step="0.1" min="0">
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">${side.charAt(0).toUpperCase() + side.slice(1)} Size:</span>
+                        <input type="number" class="${side}Size form-control" value="0.4" step="0.1" min="0" required>
                     </div>
-                    <div class="inputGroup">
-                        <label for="${side}Spread${layerCount}">Distance to Midprice (bps):</label>
-                        <input type="number" id="${side}Spread${layerCount}" class="${side}Spread" value="1" step="0.5" min="0.5">
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">Distance to Midprice (bps):</span>
+                        <input type="number" class="${side}Spread form-control" value="1" step="0.5" min="0.5" required>
                     </div>
-                    <button class="removeLayer">Remove</button>
+                    <button class="removeLayer btn btn-danger btn-sm">Remove</button>
                 `;
                 container.appendChild(newLayer);
                 
                 newLayer.querySelector('.removeLayer').addEventListener('click', function() {
                     container.removeChild(newLayer);
                 });
+
+                // Save to localStorage
+                saveInputsToLocalStorage();
             }
 
             function updateOrderbook() {
@@ -324,6 +260,11 @@
                     size: parseFloat(layer.querySelector('.askSize').value),
                     spread: parseFloat(layer.querySelector('.askSpread').value)
                 }));
+
+                // Input validation
+                if (!validateInputs(bidLayers, askLayers)) {
+                    return;
+                }
 
                 let newOrderbook = JSON.parse(JSON.stringify(initialOrderbook));
                 let newOrdersTOBE = 0;
@@ -428,6 +369,139 @@
                     <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snap</p>
                     <p>Estimated monthly rewards for new orders: $${newOrdersMonthlyRewards.toFixed(2)}</p>
                 `;
+
+                updateOrderbookChart(newOrderbook);
+                updateAdditionalMetrics(newOrderbook);
+            }
+
+            function validateInputs(bidLayers, askLayers) {
+                const allLayers = [...bidLayers, ...askLayers];
+                for (const layer of allLayers) {
+                    if (isNaN(layer.size) || layer.size <= 0) {
+                        alert('Invalid size input. Please enter a positive number.');
+                        return false;
+                    }
+                    if (isNaN(layer.spread) || layer.spread < 0.5) {
+                        alert('Invalid spread input. Please enter a number greater than or equal to 0.5.');
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            function updateOrderbookChart(orderbook) {
+                const ctx = document.getElementById('orderbookChart').getContext('2d');
+                const bids = orderbook.filter(order => !order.isMidprice && order.price < midPrice);
+                const asks = orderbook.filter(order => !order.isMidprice && order.price > midPrice);
+
+                const chartData = {
+                    labels: [...bids.map(b => b.price), ...asks.map(a => a.price)],
+                    datasets: [
+                        {
+                            label: 'Bids',
+                            data: bids.map(b => b.quantity),
+                            backgroundColor: 'rgba(0, 255, 0, 0.5)',
+                            borderColor: 'rgba(0, 255, 0, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Asks',
+                            data: [...new Array(bids.length).fill(0), ...asks.map(a => a.quantity)],
+                            backgroundColor: 'rgba(255, 0, 0, 0.5)',
+                            borderColor: 'rgba(255, 0, 0, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                };
+
+                if (orderbookChart) {
+                    orderbookChart.destroy();
+                }
+
+                orderbookChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                stacked: true,
+                                title: {
+                                    display: true,
+                                    text: 'Price'
+                                }
+                            },
+                            y: {
+                                stacked: true,
+                                title: {
+                                    display: true,
+                                    text: 'Quantity'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Orderbook Depth'
+                            }
+                        }
+                    }
+                });
+            }
+
+            function updateAdditionalMetrics(orderbook) {
+                const bids = orderbook.filter(order => !order.isMidprice && order.price < midPrice);
+                const asks = orderbook.filter(order => !order.isMidprice && order.price > midPrice);
+
+                const bestBid = Math.max(...bids.map(b => b.price));
+                const bestAsk = Math.min(...asks.map(a => a.price));
+                const spread = bestAsk - bestBid;
+                const spreadBps = (spread / midPrice) * 10000;
+
+                const bidDepth = bids.reduce((sum, bid) => sum + bid.quantity, 0);
+                const askDepth = asks.reduce((sum, ask) => sum + ask.quantity, 0);
+                const imbalance = (bidDepth - askDepth) / (bidDepth + askDepth);
+
+                additionalMetricsDiv.innerHTML = `
+                    <h3>Additional Metrics</h3>
+                    <p>Spread: ${spread.toFixed(2)} (${spreadBps.toFixed(2)} bps)</p>
+                    <p>Bid Depth: ${bidDepth.toFixed(3)}</p>
+                    <p>Ask Depth: ${askDepth.toFixed(3)}</p>
+                    <p>Order Book Imbalance: ${(imbalance * 100).toFixed(2)}%</p>
+                `;
+            }
+
+            function saveInputsToLocalStorage() {
+                const bidLayers = Array.from(document.querySelectorAll('.bidLayer')).map(layer => ({
+                    size: layer.querySelector('.bidSize').value,
+                    spread: layer.querySelector('.bidSpread').value
+                }));
+                
+                const askLayers = Array.from(document.querySelectorAll('.askLayer')).map(layer => ({
+                    size: layer.querySelector('.askSize').value,
+                    spread: layer.querySelector('.askSpread').value
+                }));
+
+                localStorage.setItem('mqpSimulationInputs', JSON.stringify({ bidLayers, askLayers }));
+            }
+
+            function loadInputsFromLocalStorage() {
+                const savedInputs = JSON.parse(localStorage.getItem('mqpSimulationInputs'));
+                if (savedInputs) {
+                    savedInputs.bidLayers.forEach(layer => {
+                        addOrderLayer('bid');
+                        const newLayer = bidInputsDiv.lastElementChild;
+                        newLayer.querySelector('.bidSize').value = layer.size;
+                        newLayer.querySelector('.bidSpread').value = layer.spread;
+                    });
+
+                    savedInputs.askLayers.forEach(layer => {
+                        addOrderLayer('ask');
+                        const newLayer = askInputsDiv.lastElementChild;
+                        newLayer.querySelector('.askSize').value = layer.size;
+                        newLayer.querySelector('.askSpread').value = layer.spread;
+                    });
+                }
             }
 
             addBidLayerButton.addEventListener('click', () => addOrderLayer('bid'));
@@ -435,8 +509,15 @@
             confirmButton.addEventListener('click', updateOrderbook);
             refreshOrderbookButton.addEventListener('click', fetchThalexOrderbook);
 
+            // Load saved inputs
+            loadInputsFromLocalStorage();
+
             // Initialize by fetching the Thalex orderbook
             fetchThalexOrderbook();
+
+            // Save inputs when changed
+            bidInputsDiv.addEventListener('input', saveInputsToLocalStorage);
+            askInputsDiv.addEventListener('input', saveInputsToLocalStorage);
         });
     </script>
 </body>
