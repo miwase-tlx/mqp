@@ -5,84 +5,179 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Functional Thalex MQP Simulation for BTC-PERPETUAL</title>
     <style>
+        :root {
+            --primary-color: #4CAF50;
+            --hover-color: #45a049;
+            --background-color: #f0f0f0;
+            --border-color: #ddd;
+            --new-order-color: #fffacd;
+            --midprice-color: #e6f3ff;
+        }
+
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 1rem;
+            font-size: 16px;
+            line-height: 1.5;
         }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
         }
+
         th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
             text-align: right;
         }
+
         th {
-            background-color: #f2f2f2;
+            background-color: var(--background-color);
         }
+
         input {
-            width: 80px;
-            padding: 5px;
-            margin: 0;
+            width: 100%;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            box-sizing: border-box;
         }
-        #controls {
-            margin-bottom: 20px;
-        }
+
         button {
-            padding: 5px 10px;
-            background-color: #4CAF50;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color);
             color: white;
             border: none;
             cursor: pointer;
-            margin: 5px;
+            margin: 0.25rem;
+            font-size: 0.9rem;
         }
+
         button:hover {
-            background-color: #45a049;
+            background-color: var(--hover-color);
         }
+
         .new-order {
-            background-color: #fffacd;
+            background-color: var(--new-order-color);
         }
+
         .midprice {
             font-weight: bold;
-            background-color: #e6f3ff;
+            background-color: var(--midprice-color);
         }
+
         #rewardsAnalysis {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f0f0f0;
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: var(--background-color);
             border-radius: 5px;
         }
+
         .orderLayer {
-            margin-bottom: 15px;
-            padding: 10px;
-            border: 1px solid #ddd;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
             border-radius: 5px;
         }
+
         #orderInputs {
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 1rem;
         }
+
         #bidInputs, #askInputs {
-            width: 48%;
+            width: 100%;
+            margin-bottom: 1rem;
         }
+
         label {
             display: inline-block;
-            width: 120px;
-            margin-right: 10px;
-            text-align: right;
+            width: 100%;
+            margin-bottom: 0.25rem;
+            text-align: left;
         }
+
         .inputGroup {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 0.5rem;
         }
+
         .removeLayer {
-            margin-left: 10px;
+            margin-top: 0.5rem;
+        }
+
+        @media screen and (min-width: 768px) {
+            body {
+                font-size: 18px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.7rem;
+            }
+
+            h3 {
+                font-size: 1.4rem;
+            }
+
+            table {
+                font-size: 1rem;
+            }
+
+            #bidInputs, #askInputs {
+                width: 48%;
+            }
+
+            button {
+                font-size: 1rem;
+            }
+        }
+
+        @media screen and (min-width: 1024px) {
+            body {
+                font-size: 20px;
+            }
+
+            h1 {
+                font-size: 2.2rem;
+            }
+
+            h2 {
+                font-size: 1.9rem;
+            }
+
+            h3 {
+                font-size: 1.6rem;
+            }
+
+            table {
+                font-size: 1.1rem;
+            }
         }
     </style>
 </head>
@@ -259,7 +354,7 @@
                 const minRewards = 0;
 
                 if (tobe <= minThreshold) return minRewards;
-                if (tobe >= maxThreshold) return maxRewards;
+                if (tobe >= maxThreshold) return maxRewards; 
 
                 const rewardRange = maxRewards - minRewards;
                 const tobeRange = maxThreshold - minThreshold;
@@ -354,73 +449,73 @@
 
                 askLayers.forEach(layer => {
                     const price = midPrice * (1 + layer.spread / 10000);
-        addOrder(price, layer.size, 'ask');
-    });
+                    addOrder(price, layer.size, 'ask');
+                });
 
-    newOrderbook.sort((a, b) => b.price - a.price);
+                newOrderbook.sort((a, b) => b.price - a.price);
 
-    // Find the highest bid and lowest ask that are not midprice
-    const highestBid = newOrderbook.find(order => !order.isMidprice && order.price < midPrice);
-    const lowestAsk = newOrderbook.find(order => !order.isMidprice && order.price > midPrice);
+                // Find the highest bid and lowest ask that are not midprice
+                const highestBid = newOrderbook.find(order => !order.isMidprice && order.price < midPrice);
+                const lowestAsk = newOrderbook.find(order => !order.isMidprice && order.price > midPrice);
 
-    // Only update midprice if the top of the book prices have changed
-    const newMidPrice = (highestBid.price !== initialOrderbook[0].price || lowestAsk.price !== initialOrderbook[initialOrderbook.length - 1].price)
-        ? Math.round((highestBid.price + lowestAsk.price) / 2)
-        : midPrice;
+                // Only update midprice if the top of the book prices have changed
+                const newMidPrice = (highestBid.price !== initialOrderbook[0].price || lowestAsk.price !== initialOrderbook[initialOrderbook.length - 1].price)
+                    ? Math.round((highestBid.price + lowestAsk.price) / 2)
+                    : midPrice;
 
-    // Recalculate TOBE for all orders
-    newOrderbook.forEach(order => {
-        if (!order.isMidprice) {
-            const pd = Math.abs(order.price - newMidPrice);
-            order.tobe = calculateTOBE(pd, order.quantity, newMidPrice);
-        }
-    });
+                // Recalculate TOBE for all orders
+                newOrderbook.forEach(order => {
+                    if (!order.isMidprice) {
+                        const pd = Math.abs(order.price - newMidPrice);
+                        order.tobe = calculateTOBE(pd, order.quantity, newMidPrice);
+                    }
+                });
 
-    // Update midprice order
-    const midpriceIndex = newOrderbook.findIndex(order => order.isMidprice);
-    newOrderbook[midpriceIndex].price = newMidPrice;
+                // Update midprice order
+                const midpriceIndex = newOrderbook.findIndex(order => order.isMidprice);
+                newOrderbook[midpriceIndex].price = newMidPrice;
 
-    updatedOrderbookTable.innerHTML = '';
-    let updatedTobeSum = newOrderbook.reduce((sum, order) => sum + (order.isMidprice ? 0 : order.tobe), 0);
+                updatedOrderbookTable.innerHTML = '';
+                let updatedTobeSum = newOrderbook.reduce((sum, order) => sum + (order.isMidprice ? 0 : order.tobe), 0);
 
-    newOrderbook.forEach(order => {
-        const row = updatedOrderbookTable.insertRow();
-        if (order.isNew) {
-            row.classList.add('new-order');
-        }
-        if (order.isMidprice) {
-            row.classList.add('midprice');
-        }
-        row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
-        row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(3);
-        row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
-        row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(2) + '%';
-    });
+                newOrderbook.forEach(order => {
+                    const row = updatedOrderbookTable.insertRow();
+                    if (order.isNew) {
+                        row.classList.add('new-order');
+                    }
+                    if (order.isMidprice) {
+                        row.classList.add('midprice');
+                    }
+                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
+                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(3);
+                    row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
+                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(2) + '%';
+                });
 
-    const updatedMonthlyRewards = calculateMonthlyRewards(updatedTobeSum);
-    const originalTOBEsum = initialOrderbook.reduce((sum, order) => sum + (order.isMidprice ? 0 : order.tobe), 0);
-    const originalMonthlyRewards = calculateMonthlyRewards(originalTOBEsum);
-    const newOrdersMonthlyRewards = updatedMonthlyRewards - originalMonthlyRewards;
+                const updatedMonthlyRewards = calculateMonthlyRewards(updatedTobeSum);
+                const originalTOBEsum = initialOrderbook.reduce((sum, order) => sum + (order.isMidprice ? 0 : order.tobe), 0);
+                const originalMonthlyRewards = calculateMonthlyRewards(originalTOBEsum);
+                const newOrdersMonthlyRewards = updatedMonthlyRewards - originalMonthlyRewards;
 
-    updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(2)} | Monthly Rewards: $${updatedMonthlyRewards.toFixed(2)}`;
+                updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(2)} | Monthly Rewards: $${updatedMonthlyRewards.toFixed(2)}`;
 
-    const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(2);
-    rewardsAnalysisDiv.innerHTML = `
-        <h3>Rewards analysis for new orders</h3>
-        <p>TOBE from new orders: ${newOrdersTOBE.toFixed(2)}</p>
-        <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snap</p>
-        <p>Estimated monthly rewards for new orders: $${newOrdersMonthlyRewards.toFixed(2)}</p>
-    `;
-}
+                const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(2);
+                rewardsAnalysisDiv.innerHTML = `
+                    <h3>Rewards analysis for new orders</h3>
+                    <p>TOBE from new orders: ${newOrdersTOBE.toFixed(2)}</p>
+                    <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snap</p>
+                    <p>Estimated monthly rewards for new orders: $${newOrdersMonthlyRewards.toFixed(2)}</p>
+                `;
+            }
 
-addBidLayerButton.addEventListener('click', () => addOrderLayer('bid'));
-addAskLayerButton.addEventListener('click', () => addOrderLayer('ask'));
-confirmButton.addEventListener('click', updateOrderbook);
-refreshOrderbookButton.addEventListener('click', fetchThalexOrderbook);
+            addBidLayerButton.addEventListener('click', () => addOrderLayer('bid'));
+            addAskLayerButton.addEventListener('click', () => addOrderLayer('ask'));
+            confirmButton.addEventListener('click', updateOrderbook);
+            refreshOrderbookButton.addEventListener('click', fetchThalexOrderbook);
 
-// Initialize by fetching the Thalex orderbook
-fetchThalexOrderbook();
-});
-</script>
+            // Initialize by fetching the Thalex orderbook
+            fetchThalexOrderbook();
+        });
+    </script>
 </body>
 </html>
