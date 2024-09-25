@@ -3,45 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Functional Thalex MQP Simulation for BTC-Perp</title>
+    <title>Thalex MQP Simulation for BTC-PERPETUAL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: right;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        input {
-            width: 80px;
-            padding: 5px;
-            margin: 0;
-        }
-        #controls {
-            margin-bottom: 20px;
-        }
-        button {
-            padding: 5px 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover {
-            background-color: #45a049;
+        .orderbook-chart {
+            max-width: 600px;
+            margin: 20px auto;
         }
         .new-order {
             background-color: #fffacd;
@@ -50,117 +18,70 @@
             font-weight: bold;
             background-color: #e6f3ff;
         }
-        #rewardsAnalysis {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f0f0f0;
-            border-radius: 5px;
-        }
-        .orderLayer {
-            margin-bottom: 15px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        #orderInputs {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-        #bidInputs, #askInputs {
-            width: 48%;
-        }
-        label {
-            display: inline-block;
-            width: 120px;
-            margin-right: 10px;
-            text-align: right;
-        }
-        .inputGroup {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .removeLayer {
-            margin-left: 10px;
-        }
     </style>
 </head>
 <body>
-    <h1>Functional Thalex MQP Simulation for BTC-Perp</h1>
-    <div id="orderInputs">
-        <div id="bidInputs">
-            <h3>Bid Orders</h3>
-            <button id="addBidLayer">Add Bid Layer</button>
-            <div class="bidLayer orderLayer">
-                <div class="inputGroup">
-                    <label for="bidSize1">Bid Size:</label>
-                    <input type="number" id="bidSize1" class="bidSize" value="0.4" step="0.1" min="0">
-                </div>
-                <div class="inputGroup">
-                    <label for="bidSpread1">Fullspread (bps):</label>
-                    <input type="number" id="bidSpread1" class="bidSpread" value="1" step="0.5" min="0.5">
-                </div>
+    <div class="container mt-5">
+        <h1 class="mb-4">Thalex MQP Simulation for BTC-PERPETUAL</h1>
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h3>Bid Orders</h3>
+                <button id="addBidLayer" class="btn btn-primary mb-2">Add Bid Layer</button>
+                <div id="bidInputs"></div>
             </div>
+            <div class="col-md-6">
+                <h3>Ask Orders</h3>
+                <button id="addAskLayer" class="btn btn-primary mb-2">Add Ask Layer</button>
+                <div id="askInputs"></div>
+            </div>
+        </div>
+        <button id="confirmButton" class="btn btn-success me-2">Confirm</button>
+        <button id="refreshOrderbook" class="btn btn-secondary">Refresh Orderbook</button>
+        
+        <h2 class="mt-4">Thalex BTC-PERPETUAL Orderbook</h2>
+        <div class="table-responsive">
+            <table id="originalOrderbook" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>TOBE</th>
+                        <th>TOBE%</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div id="originalTobeSum"></div>
+        
+        <h2 class="mt-4">Updated orderbook with additional quotes</h2>
+        <div class="table-responsive">
+            <table id="updatedOrderbook" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>TOBE</th>
+                        <th>TOBE%</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div id="updatedTobeSum"></div>
+        <div id="rewardsAnalysis" class="mt-4 p-3 bg-light"></div>
+        
+        <div class="orderbook-chart">
+            <canvas id="orderbookChart"></canvas>
         </div>
         
-        <div id="askInputs">
-            <h3>Ask Orders</h3>
-            <button id="addAskLayer">Add Ask Layer</button>
-            <div class="askLayer orderLayer">
-                <div class="inputGroup">
-                    <label for="askSize1">Ask Size:</label>
-                    <input type="number" id="askSize1" class="askSize" value="0.4" step="0.1" min="0">
-                </div>
-                <div class="inputGroup">
-                    <label for="askSpread1">Fullspread (bps):</label>
-                    <input type="number" id="askSpread1" class="askSpread" value="1" step="0.5" min="0.5">
-                </div>
-            </div>
-        </div>
+        <div id="additionalMetrics" class="mt-4 p-3 bg-light"></div>
     </div>
-    <button id="confirmButton">Confirm</button>
-    <h2>Example orderbook</h2>
-    <table id="originalOrderbook">
-        <thead>
-            <tr>
-                <th>Price</th>
-                <th>Quantity</th>
-                <th>TOBE</th>
-                <th>MQS (%)</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    <div id="originalTobeSum"></div>
-    <h2>Updated orderbook with additional quotes</h2>
-    <table id="updatedOrderbook">
-        <thead>
-            <tr>
-                <th>Price</th>
-                <th>Quantity</th>
-                <th>TOBE</th>
-                <th>MQS (%)</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    <div id="updatedTobeSum"></div>
-    <div id="rewardsAnalysis"></div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const initialOrderbook = [
-                { price: 60004, quantity: 0.4, tobe: 0.178179744 },
-                { price: 60002, quantity: 0.4, tobe: 0.22449241 },
-                { price: 60000, quantity: 0.4, tobe: 0.282842712 },
-                { price: 59997, quantity: 0, tobe: 0, isMidprice: true },
-                { price: 59994, quantity: 0.4, tobe: 0.282842712 },
-                { price: 59992, quantity: 0.4, tobe: 0.22449241 },
-                { price: 59990, quantity: 0.4, tobe: 0.178179744 },
-            ];
-
             const confirmButton = document.getElementById('confirmButton');
+            const refreshOrderbookButton = document.getElementById('refreshOrderbook');
             const originalOrderbookTable = document.getElementById('originalOrderbook').getElementsByTagName('tbody')[0];
             const updatedOrderbookTable = document.getElementById('updatedOrderbook').getElementsByTagName('tbody')[0];
             const originalTobeSumDiv = document.getElementById('originalTobeSum');
@@ -170,23 +91,133 @@
             const addAskLayerButton = document.getElementById('addAskLayer');
             const bidInputsDiv = document.getElementById('bidInputs');
             const askInputsDiv = document.getElementById('askInputs');
+            const additionalMetricsDiv = document.getElementById('additionalMetrics');
 
-            function calculatePriceScore(pd) {
-                const typicalDistance = 6; // 1 bps
+            let initialOrderbook = [];
+            let midPrice = 0;
+            let lastOrderbookHash = '';
+            let orderbookChart;
+            let previousBestBid = null;
+            let previousBestAsk = null;
+
+            function calculatePriceScore(pd, midPrice) {
+                const typicalDistance = midPrice * 0.0001;
                 const nd = pd / typicalDistance;
                 return Math.pow(0.5, nd);
             }
 
-            function calculateTOBE(pd, quantity) {
-                const priceScore = calculatePriceScore(pd);
+            function calculateTOBE(pd, quantity, midPrice) {
+                const priceScore = calculatePriceScore(pd, midPrice);
                 return priceScore * quantity;
+            }
+
+            function hashOrderbook(orderbook) {
+                return JSON.stringify(orderbook.bids.slice(0, 5).concat(orderbook.asks.slice(0, 5)));
+            }
+
+            function processOrderbookData(data) {
+                const bids = data.result.bids.slice(0, 5).map(([price, quantity]) => [price, quantity]);
+                const asks = data.result.asks.slice(0, 5).map(([price, quantity]) => [price, quantity]);
+                const newBestBid = parseFloat(bids[0][0]);
+                const newBestAsk = parseFloat(asks[0][0]);
+
+                // Update midPrice only if best bid or ask has changed
+                if (newBestBid !== previousBestBid || newBestAsk !== previousBestAsk) {
+                    midPrice = (newBestBid + newBestAsk) / 2;
+                    previousBestBid = newBestBid;
+                    previousBestAsk = newBestAsk;
+                }
+                
+                initialOrderbook = [
+                    ...bids.map(([price, quantity]) => ({
+                        price: parseFloat(price),
+                        quantity,
+                        tobe: calculateTOBE(Math.abs(price - midPrice), quantity, midPrice)
+                    })),
+                    { price: midPrice, quantity: 0, tobe: 0, isMidprice: true },
+                    ...asks.map(([price, quantity]) => ({
+                        price: parseFloat(price),
+                        quantity,
+                        tobe: calculateTOBE(Math.abs(price - midPrice), quantity, midPrice)
+                    }))
+                ];
+                initialOrderbook.sort((a, b) => b.price - a.price);
+                updateOriginalOrderbook();
+                updateOrderbookChart(initialOrderbook);
+                updateAdditionalMetrics(initialOrderbook);
+            }
+
+            function useMockData() {
+                const mockData = {
+                    result: {
+                        bids: [[50000, 1], [49900, 2], [49800, 3], [49700, 4], [49600, 5]],
+                        asks: [[50100, 1], [50200, 2], [50300, 3], [50400, 4], [50500, 5]]
+                    }
+                };
+                processOrderbookData(mockData);
+                console.log('Mock data loaded successfully');
+            }
+
+            function fetchThalexOrderbook() {
+                const corsProxy = 'https://api.allorigins.win/raw?url=';
+                const thalexApiUrl = 'https://thalex.com/api/v2/public/book?instrument_name=BTC-PERPETUAL';
+                
+                console.log('Fetching orderbook...');
+                fetch(corsProxy + encodeURIComponent(thalexApiUrl))
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Received data:', data);
+                        if (data.result) {
+                            const newOrderbookHash = hashOrderbook(data.result);
+                            if (newOrderbookHash !== lastOrderbookHash) {
+                                processOrderbookData(data);
+                                lastOrderbookHash = newOrderbookHash;
+                                console.log('Orderbook refreshed successfully!');
+                                alert('Orderbook refreshed successfully!');
+                            } else {
+                                console.log('Orderbook has not changed since the last refresh.');
+                                alert('Orderbook has not changed since the last refresh.');
+                            }
+                        } else {
+                            throw new Error('No result in API response');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching Thalex orderbook:', error);
+                        console.error('Error details:', error.message);
+                        alert('Failed to refresh orderbook. Using mock data. Check console for details.');
+                        useMockData();
+                    });
+            }
+
+            function calculateMonthlyRewards(tobe) {
+                const minThreshold = 0.5;
+                const maxThreshold = 3.0;
+                const maxRewards = 30000;
+                const minRewards = 0;
+
+                if (tobe <= minThreshold) return minRewards;
+                if (tobe >= maxThreshold) return maxRewards;
+
+                const rewardRange = maxRewards - minRewards;
+                const tobeRange = maxThreshold - minThreshold;
+                const rewardPerTobe = rewardRange / tobeRange;
+
+                return (tobe - minThreshold) * rewardPerTobe;
             }
 
             function updateOriginalOrderbook() {
                 originalOrderbookTable.innerHTML = '';
                 let tobeSum = 0;
                 initialOrderbook.forEach(order => {
-                    tobeSum += order.tobe;
+                    if (!order.isMidprice) {
+                        tobeSum += order.tobe;
+                    }
                 });
                 
                 initialOrderbook.forEach(order => {
@@ -194,35 +225,39 @@
                     if (order.isMidprice) {
                         row.classList.add('midprice');
                     }
-                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
-                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
+                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price.toFixed(2)}` : order.price.toFixed(2);
+                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(3);
                     row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
-                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / tobeSum).toFixed(1) + '%';
+                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / tobeSum).toFixed(2) + '%';
                 });
-                originalTobeSumDiv.textContent = `Original TOBEsum: ${tobeSum.toFixed(2)}`;
+                const originalMonthlyRewards = calculateMonthlyRewards(tobeSum);
+                originalTobeSumDiv.textContent = `Original TOBEsum: ${tobeSum.toFixed(2)} | Monthly Rewards: $${originalMonthlyRewards.toFixed(2)}`;
             }
 
             function addOrderLayer(side) {
                 const container = side === 'bid' ? bidInputsDiv : askInputsDiv;
                 const layerCount = container.querySelectorAll(`.${side}Layer`).length + 1;
                 const newLayer = document.createElement('div');
-                newLayer.className = `${side}Layer orderLayer`;
+                newLayer.className = `${side}Layer mb-2`;
                 newLayer.innerHTML = `
-                    <div class="inputGroup">
-                        <label for="${side}Size${layerCount}">${side.charAt(0).toUpperCase() + side.slice(1)} Size:</label>
-                        <input type="number" id="${side}Size${layerCount}" class="${side}Size" value="0.4" step="0.1" min="0">
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">${side.charAt(0).toUpperCase() + side.slice(1)} Size:</span>
+                        <input type="number" class="${side}Size form-control" value="0.4" step="0.1" min="0" required>
                     </div>
-                    <div class="inputGroup">
-                        <label for="${side}Spread${layerCount}">Fullspread (bps):</label>
-                        <input type="number" id="${side}Spread${layerCount}" class="${side}Spread" value="1" step="0.5" min="0.5">
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">Distance to Midprice (bps):</span>
+                        <input type="number" class="${side}Spread form-control" value="1" step="0.5" min="0.5" required>
                     </div>
-                    <button class="removeLayer">Remove</button>
+                    <button class="removeLayer btn btn-danger btn-sm">Remove</button>
                 `;
                 container.appendChild(newLayer);
                 
                 newLayer.querySelector('.removeLayer').addEventListener('click', function() {
                     container.removeChild(newLayer);
                 });
+
+                // Save to localStorage
+                saveInputsToLocalStorage();
             }
 
             function updateOrderbook() {
@@ -236,43 +271,75 @@
                     spread: parseFloat(layer.querySelector('.askSpread').value)
                 }));
 
+                // Input validation
+                if (!validateInputs(bidLayers, askLayers)) {
+                    return;
+                }
+
                 let newOrderbook = JSON.parse(JSON.stringify(initialOrderbook));
                 let newOrdersTOBE = 0;
-                const midPrice = 59997;
 
                 function addOrder(price, size, side) {
-                    const pd = Math.abs(price - midPrice);
-                    const tobe = calculateTOBE(pd, size);
                     const existingOrderIndex = newOrderbook.findIndex(order => order.price === price);
                     
                     if (existingOrderIndex !== -1) {
                         newOrderbook[existingOrderIndex].quantity += size;
-                        newOrderbook[existingOrderIndex].tobe += tobe;
                         newOrderbook[existingOrderIndex].isNew = true;
                     } else {
                         const insertIndex = newOrderbook.findIndex(order => 
                             (side === 'bid' && order.price < price) || (side === 'ask' && order.price > price)
                         );
-                        newOrderbook.splice(insertIndex, 0, { price, quantity: size, tobe, isNew: true });
+                        newOrderbook.splice(insertIndex, 0, { price, quantity: size, tobe: 0, isNew: true });
                     }
-                    newOrdersTOBE += tobe;
                 }
 
+                const originalMidPrice = initialOrderbook.find(order => order.isMidprice).price;
+                
                 bidLayers.forEach(layer => {
-                    const price = midPrice - Math.round(layer.spread * 3);
+                    const price = originalMidPrice * (1 - layer.spread / 10000);
                     addOrder(price, layer.size, 'bid');
                 });
 
                 askLayers.forEach(layer => {
-                    const price = midPrice + Math.round(layer.spread * 3);
+                    const price = originalMidPrice * (1 + layer.spread / 10000);
                     addOrder(price, layer.size, 'ask');
                 });
 
                 newOrderbook.sort((a, b) => b.price - a.price);
 
+                // Find new best bid and ask
+                const newBestBid = newOrderbook.find(order => order.quantity > 0 && !order.isMidprice).price;
+                const newBestAsk = [...newOrderbook].reverse().find(order => order.quantity > 0 && !order.isMidprice).price;
+
+                // Update midPrice and recalculate TOBEs if best bid or ask has changed OR new orders were added
+                if (newBestBid !== previousBestBid || newBestAsk !== previousBestAsk || bidLayers.length > 0 || askLayers.length > 0) { 
+                    const newMidPrice = (newBestBid + newBestAsk) / 2;
+                    previousBestBid = newBestBid;
+                    previousBestAsk = newBestAsk;
+
+                    // Update or insert the midprice order
+                    const midpriceIndex = newOrderbook.findIndex(order => order.isMidprice);
+                    if (midpriceIndex !== -1) {
+                        newOrderbook[midpriceIndex].price = newMidPrice;
+                    } else {
+                        const insertIndex = newOrderbook.findIndex(order => order.price < newMidPrice);
+                        newOrderbook.splice(insertIndex, 0, { price: newMidPrice, quantity: 0, tobe: 0, isMidprice: true });
+                    }
+
+                    // Recalculate TOBE for all orders with the new midPrice
+                    newOrderbook.forEach(order => {
+                        if (!order.isMidprice) {
+                            const pd = Math.abs(order.price - newMidPrice);
+                            order.tobe = calculateTOBE(pd, order.quantity, newMidPrice);
+                            if (order.isNew) {
+                                newOrdersTOBE += order.tobe;
+                            }
+                        }
+                    });
+                }
+
                 updatedOrderbookTable.innerHTML = '';
-                let updatedTobeSum = 0;
-                newOrderbook.forEach(order => updatedTobeSum += order.tobe);
+                let updatedTobeSum = newOrderbook.reduce((sum, order) => sum + (order.isMidprice ? 0 : order.tobe), 0);
 
                 newOrderbook.forEach(order => {
                     const row = updatedOrderbookTable.insertRow();
@@ -282,28 +349,177 @@
                     if (order.isMidprice) {
                         row.classList.add('midprice');
                     }
-                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price}` : order.price;
-                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(1);
+                    row.insertCell(0).textContent = order.isMidprice ? `Midprice ${order.price.toFixed(2)}` : order.price.toFixed(2);
+                    row.insertCell(1).textContent = order.isMidprice ? '' : order.quantity.toFixed(3);
                     row.insertCell(2).textContent = order.isMidprice ? '' : order.tobe.toFixed(2);
-                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(1) + '%';
+                    row.insertCell(3).textContent = order.isMidprice ? '' : (order.tobe * 100 / updatedTobeSum).toFixed(2) + '%';
                 });
 
-                updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(2)}`;
+                const updatedMonthlyRewards = calculateMonthlyRewards(updatedTobeSum);
+                const originalTOBEsum = initialOrderbook.reduce((sum, order) => sum + (order.isMidprice ? 0 : order.tobe), 0);
+                const originalMonthlyRewards = calculateMonthlyRewards(originalTOBEsum);
+                const newOrdersMonthlyRewards = updatedMonthlyRewards - originalMonthlyRewards;
 
-                const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(1);
+                updatedTobeSumDiv.textContent = `Updated TOBEsum: ${updatedTobeSum.toFixed(2)} | Monthly Rewards: $${updatedMonthlyRewards.toFixed(2)}`;
+
+                const newOrdersTOBEPercentage = (newOrdersTOBE * 100 / updatedTobeSum).toFixed(2);
                 rewardsAnalysisDiv.innerHTML = `
                     <h3>Rewards analysis for new orders</h3>
                     <p>TOBE from new orders: ${newOrdersTOBE.toFixed(2)}</p>
-                    <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snapshots</p>
+                    <p>New orders capturing ${newOrdersTOBEPercentage}% of rewards from snap</p>
+                    <p>Estimated monthly rewards for new orders: $${newOrdersMonthlyRewards.toFixed(2)}</p>
                 `;
+
+                updateOrderbookChart(newOrderbook);
+                updateAdditionalMetrics(newOrderbook);
+            }
+
+            function validateInputs(bidLayers, askLayers) {
+                const allLayers = [...bidLayers, ...askLayers];
+                for (const layer of allLayers) {
+                    if (isNaN(layer.size) || layer.size <= 0) {
+                        alert('Invalid size input. Please enter a positive number.');
+                        return false;
+                    }
+                    if (isNaN(layer.spread) || layer.spread < 0.5) {
+                        alert('Invalid spread input. Please enter a number greater than or equal to 0.5.');
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            function updateOrderbookChart(orderbook) {
+                const ctx = document.getElementById('orderbookChart').getContext('2d');
+                const currentMidPrice = orderbook.find(order => order.isMidprice).price;
+                const bids = orderbook.filter(order => !order.isMidprice && order.price < currentMidPrice);
+                const asks = orderbook.filter(order => !order.isMidprice && order.price > currentMidPrice);
+
+                const chartData = {
+                    labels: [...bids.map(b => b.price.toFixed(2)), ...asks.map(a => a.price.toFixed(2))],
+                    datasets: [
+                        {
+                            label: 'Bids',
+                            data: bids.map(b => b.quantity),
+                            backgroundColor: 'rgba(0, 255, 0, 0.5)',
+                            borderColor: 'rgba(0, 255, 0, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Asks',
+                            data: [...new Array(bids.length).fill(0), ...asks.map(a => a.quantity)],
+                            backgroundColor: 'rgba(255, 0, 0, 0.5)',
+                            borderColor: 'rgba(255, 0, 0, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                };
+
+                if (orderbookChart) {
+                    orderbookChart.destroy();
+                }
+
+                orderbookChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                stacked: true,
+                                title: {
+                                    display: true,
+                                    text: 'Price'
+                                }
+                            },
+                            y: {
+                                stacked: true,
+                                title: {
+                                    display: true,
+                                    text: 'Quantity'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Orderbook Depth'
+                            }
+                        }
+                    }
+                });
+            }
+
+            function updateAdditionalMetrics(orderbook) {
+                const currentMidPrice = orderbook.find(order => order.isMidprice).price;
+                const bids = orderbook.filter(order => !order.isMidprice && order.price < currentMidPrice);
+                const asks = orderbook.filter(order => !order.isMidprice && order.price > currentMidPrice);
+
+                const bestBid = Math.max(...bids.map(b => b.price));
+                const bestAsk = Math.min(...asks.map(a => a.price));
+                const spread = bestAsk - bestBid;
+                const spreadBps = (spread / currentMidPrice) * 10000;
+
+                const bidDepth = bids.reduce((sum, bid) => sum + bid.quantity, 0);
+                const askDepth = asks.reduce((sum, ask) => sum + ask.quantity, 0);
+                const imbalance = (bidDepth - askDepth) / (bidDepth + askDepth);
+
+                additionalMetricsDiv.innerHTML = `
+                    <h3>Additional Metrics</h3>
+                    <p>Spread: ${spread.toFixed(2)} (${spreadBps.toFixed(2)} bps)</p>
+                    <p>Bid Depth: ${bidDepth.toFixed(3)}</p>
+                    <p>Ask Depth: ${askDepth.toFixed(3)}</p>
+                    <p>Order Book Imbalance: ${(imbalance * 100).toFixed(2)}%</p>
+                `;
+            }
+
+            function saveInputsToLocalStorage() {
+                const bidLayers = Array.from(document.querySelectorAll('.bidLayer')).map(layer => ({
+                    size: layer.querySelector('.bidSize').value,
+                    spread: layer.querySelector('.bidSpread').value
+                }));
+                
+                const askLayers = Array.from(document.querySelectorAll('.askLayer')).map(layer => ({
+                    size: layer.querySelector('.askSize').value,
+                    spread: layer.querySelector('.askSpread').value
+                }));
+
+                localStorage.setItem('mqpSimulationInputs', JSON.stringify({ bidLayers, askLayers }));
+            }
+
+            function loadInputsFromLocalStorage() {
+                const savedInputs = JSON.parse(localStorage.getItem('mqpSimulationInputs'));
+                if (savedInputs) {
+                    savedInputs.bidLayers.forEach(layer => {
+                        addOrderLayer('bid');
+                        const newLayer = bidInputsDiv.lastElementChild;
+                        newLayer.querySelector('.bidSize').value = layer.size;
+                        newLayer.querySelector('.bidSpread').value = layer.spread;
+                    });
+
+                    savedInputs.askLayers.forEach(layer => {
+                        addOrderLayer('ask');
+                        const newLayer = askInputsDiv.lastElementChild;
+                        newLayer.querySelector('.askSize').value = layer.size;
+                        newLayer.querySelector('.askSpread').value = layer.spread;
+                    });
+                }
             }
 
             addBidLayerButton.addEventListener('click', () => addOrderLayer('bid'));
             addAskLayerButton.addEventListener('click', () => addOrderLayer('ask'));
             confirmButton.addEventListener('click', updateOrderbook);
+            refreshOrderbookButton.addEventListener('click', fetchThalexOrderbook);
 
-            // Initialize the original orderbook
-            updateOriginalOrderbook();
+            // Load saved inputs
+            loadInputsFromLocalStorage();
+
+            // Initialize by fetching the Thalex orderbook
+            fetchThalexOrderbook();
+
+            // Save inputs when changed
+            bidInputsDiv.addEventListener('input', saveInputsToLocalStorage);
+            askInputsDiv.addEventListener('input', saveInputsToLocalStorage);
         });
     </script>
 </body>
