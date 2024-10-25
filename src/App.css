@@ -1,0 +1,13 @@
+.orderbook-chart {
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+.new-order {
+  background-color: #fffacd;
+}
+
+.midprice {
+  font-weight: bold;
+  background-color: #e6f3ff;
+}
