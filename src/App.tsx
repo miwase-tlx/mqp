@@ -11,6 +11,9 @@ function App() {
   const [updatedOrderbook, setUpdatedOrderbook] = useState<Order[]>([]);
   const [bidLayers, setBidLayers] = useState<Layer[]>([]);
   const [askLayers, setAskLayers] = useState<Layer[]>([]);
+  const [lastUpdateTime, setLastUpdateTime] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const setMockData = useCallback(() => {
     const mockOrderbook = [
@@ -28,18 +31,28 @@ function App() {
     ];
     setInitialOrderbook(mockOrderbook);
     setUpdatedOrderbook(mockOrderbook);
+    setLastUpdateTime(new Date().toLocaleTimeString());
   }, []);
 
   const fetchThalexOrderbook = useCallback(async () => {
+    if (isLoading) return; // Prevent multiple simultaneous fetches
+    
+    setIsLoading(true);
+    setErrorMessage(null);
+    
     try {
-      const corsProxy = 'https://api.allorigins.win/raw?url=';
+      const corsProxy = 'https://corsproxy.io/?';
       const thalexApiUrl = 'https://thalex.com/api/v2/public/book?instrument_name=BTC-PERPETUAL';
-      
       const response = await fetch(corsProxy + encodeURIComponent(thalexApiUrl));
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       const data = await response.json();
-      if (!data.result) throw new Error('No result in API response');
+      if (!data.result) {
+        throw new Error('No result in API response');
+      }
 
       const bids = data.result.bids.slice(0, 5);
       const asks = data.result.asks.slice(0, 5);
@@ -60,17 +73,34 @@ function App() {
       ].sort((a, b) => b.price - a.price);
 
       setInitialOrderbook(newOrderbook);
-      setUpdatedOrderbook(newOrderbook);
+      
+      // Update the orderbook while preserving user's layers
+      const updatedBook = updateOrderbookWithLayers(newOrderbook, bidLayers, askLayers);
+      setUpdatedOrderbook(updatedBook);
+      
+      setLastUpdateTime(new Date().toLocaleTimeString());
     } catch (error) {
       console.error('Error fetching Thalex orderbook:', error);
-      alert('Failed to fetch orderbook. Using mock data.');
-      setMockData();
+      setErrorMessage('Failed to fetch orderbook data');
+      
+      if (initialOrderbook.length === 0) {
+        console.log('Using mock data as fallback');
+        setMockData();
+      }
+    } finally {
+      setIsLoading(false);
     }
-  }, [setMockData]);
+  }, [setMockData, bidLayers, askLayers, initialOrderbook.length, isLoading]);
 
   useEffect(() => {
     fetchThalexOrderbook();
     loadSavedInputs();
+
+    // Set up automatic refresh every 5 seconds
+    const refreshInterval = setInterval(fetchThalexOrderbook, 5000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(refreshInterval);
   }, [fetchThalexOrderbook]);
 
   const handleAddBidLayer = () => {
@@ -178,9 +208,15 @@ function App() {
       <button className="btn btn-success me-2" onClick={handleConfirm}>
         Confirm
       </button>
-      <button className="btn btn-secondary" onClick={fetchThalexOrderbook}>
-        Refresh Orderbook
+      <button 
+        className={`btn btn-secondary ${isLoading ? 'disabled' : ''}`} 
+        onClick={fetchThalexOrderbook}
+        disabled={isLoading}
+      >
+        {isLoading ? 'Refreshing...' : 'Refresh Orderbook'}
       </button>
+      <small className="ms-2 text-muted">Last updated: {lastUpdateTime}</small>
+      {errorMessage && <div className="alert alert-danger mt-2">{errorMessage}</div>}
 
       <OrderbookTable
         orders={initialOrderbook}
